@@ -3,26 +3,52 @@ import { useEffect, useRef } from "react";
 import { COLORS } from "../utils/constants";
 import { User } from "lucide-react";
 import { motion } from "framer-motion";
+import { UserImportModal } from "./UserImportModal";
 
 export const UserList = ({
   users,
   selectedUsers = [],
   currentWinner = null,
   highlightedUserId = null,
+  onRemoveSelectedUser = null,
+  onImportUsers = null,
 }) => {
   const containerRef = useRef(null);
-  const highlightedItemRef = useRef(null);
 
   useEffect(() => {
-    if (
-      highlightedUserId &&
-      highlightedItemRef.current &&
-      containerRef.current
-    ) {
-      highlightedItemRef.current.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
+    if (highlightedUserId && containerRef.current) {
+      const container = containerRef.current;
+
+      // Tìm element bằng data-user-id
+      const item = container.querySelector(
+        `[data-user-id="${highlightedUserId}"]`,
+      );
+
+      if (item) {
+        try {
+          item.scrollIntoView({
+            behavior: "smooth", // Smooth scroll để mượt mà
+            block: "center",
+            inline: "nearest",
+          });
+        } catch (error) {
+          // Fallback: Manual scroll
+          const containerRect = container.getBoundingClientRect();
+          const itemRect = item.getBoundingClientRect();
+          const scrollTop = container.scrollTop;
+          const itemRelativeTop = itemRect.top - containerRect.top;
+          const targetScroll =
+            scrollTop +
+            itemRelativeTop -
+            containerRect.height / 2 +
+            itemRect.height / 2;
+
+          container.scrollTo({
+            top: targetScroll,
+            behavior: "smooth",
+          });
+        }
+      }
     }
   }, [highlightedUserId]);
 
@@ -35,23 +61,30 @@ export const UserList = ({
   };
 
   return (
-    <div className="h-full flex flex-col !p-3 bg-white rounded-xl  border border-solid border-gray-200">
-      <div className="mb-6">
+    <div className="h-full flex flex-col p-3! bg-white rounded-xl  border border-solid border-gray-200">
+      <div className="mb-4">
         <h2
           className="text-2xl font-black mb-2 text-center"
           style={{ color: COLORS.primary.gold }}
         >
           Danh Sách Người Chơi
         </h2>
-        <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+        <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mb-3">
           <User className="w-4 h-4" />
           <span>{users.length} người tham gia</span>
         </div>
+
+        {/* Import Users Button */}
+        {onImportUsers && (
+          <div className="flex justify-center">
+            <UserImportModal onImportUsers={onImportUsers} />
+          </div>
+        )}
       </div>
 
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto space-y-3 custom-scrollbar"
+        className="flex-1 overflow-y-auto space-y-3 custom-scrollbar overflow-x-hidden"
         style={{ maxHeight: "calc(100vh - 200px)" }}
       >
         {users.map((user, index) => {
@@ -62,14 +95,13 @@ export const UserList = ({
           return (
             <motion.div
               key={user.id}
-              ref={isHighlighted ? highlightedItemRef : null}
-              className="relative !p-1"
-              initial={{ opacity: 0, x: -20 }}
+              data-user-id={user.id}
+              className="relative p-1!"
+              initial={{ opacity: 1, x: 0 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
             >
               <motion.div
-                className="!px-3 !py-2 rounded-lg text-sm font-semibold transition-all"
+                className="px-3! py-2! rounded-lg text-sm font-semibold transition-all"
                 style={{
                   background: isWinner
                     ? `linear-gradient(135deg, ${COLORS.primary.gold}40, ${COLORS.primary.gold}20)`
@@ -94,7 +126,18 @@ export const UserList = ({
                 }}
                 transition={{ duration: 0.15 }}
               >
-                {user.name}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="truncate">{user.name}</div>
+                  {isSelected && onRemoveSelectedUser && (
+                    <button
+                      onClick={() => onRemoveSelectedUser(user.id)}
+                      className="ml-2 rounded-full w-6 h-6 flex items-center justify-center bg-white text-gray-700 border"
+                      title="Bỏ chọn"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
               </motion.div>
             </motion.div>
           );

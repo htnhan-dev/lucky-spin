@@ -24,13 +24,13 @@ export const PrizeList = ({ prizes, spinHistory }) => {
         </div>
       </div>
 
-      <div className="flex-1 !mt-3 !p-2 space-y-3 overflow-y-auto custom-scrollbar">
+      <div className="flex-1 mt-3! p-2! space-y-3 overflow-y-auto custom-scrollbar">
         {prizes.map((prize, index) => {
           const Icon = getIcon(prize.icon);
           return (
             <motion.div
               key={prize.id}
-              className="flex items-center gap-3 !p-3 !mb-2 rounded-xl bg-white border-2"
+              className="flex items-center gap-3 p-3! mb-2! rounded-xl bg-white border-2"
               style={{
                 borderColor:
                   prize.quantity > 0 ? COLORS.neutral.lightGray : "#E5E7EB",
@@ -54,7 +54,13 @@ export const PrizeList = ({ prizes, spinHistory }) => {
               <div className="flex-1 min-w-0">
                 <p
                   className="font-bold text-sm truncate"
-                  style={{ color: COLORS.primary.red }}
+                  style={{ color: COLORS.primary.darkRed }}
+                >
+                  {prize.name}
+                </p>
+                <p
+                  className="font-bold text-sm truncate"
+                  style={{ color: COLORS.neutral.gray }}
                 >
                   {prize.description}
                 </p>

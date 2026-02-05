@@ -9,27 +9,38 @@ const ICON_MAP = {
   Award: Award,
   Medal: Medal,
   Gift: Gift,
+  Sparkles: Sparkles,
 };
 
 export const LuckyWheel = ({
-  prizes = [], // Danh sách 4 giải thưởng
-  selectedUsers = [],
-  currentWinner = null,
+  prizes = [], // Danh sách 5 giải thưởng
+  maxPrizeTier = null, // Giải trần từ vòng quay
   isSpinning = false,
 }) => {
   const radius = 160;
-  const centerSize = 25;
-  const displayPrizes = prizes.slice(0, 4); // Chỉ lấy 4 giải
+  const centerSize = 20;
+  const displayPrizes = prizes.slice(0, 5); // Lấy 5 giải: Đặc biệt, Nhất, Nhì, Ba, Tư
 
-  // Tìm giải thưởng của winner
-  const winnerPrizeIndex = currentWinner
-    ? displayPrizes.findIndex((p) => p.id === currentWinner.prizeId)
+  // Tìm index của giải trần
+  const maxPrizeIndex = maxPrizeTier
+    ? displayPrizes.findIndex((p) => p.tier === maxPrizeTier)
     : -1;
 
-  const targetAngle = winnerPrizeIndex >= 0 ? winnerPrizeIndex * 90 : 0;
+  const segmentAngle = 360 / displayPrizes.length; // 72° cho mỗi giải
+  // Tam giác mốc ở bên phải (0°), thêm offset +10° để không dừng giữa 2 giải
+  const angleOffset = 10;
+  const targetAngle =
+    maxPrizeIndex >= 0 ? maxPrizeIndex * segmentAngle + angleOffset : 0;
   const totalRotation = isSpinning
     ? 360 * ANIMATION_CONFIG.spin.rotations + (360 - targetAngle)
     : 0;
+
+  // Duration động: gọi function nếu là function, không thì dùng trực tiếp
+  const spinDuration =
+    typeof ANIMATION_CONFIG.spin.duration === "function"
+      ? ANIMATION_CONFIG.spin.duration()
+      : ANIMATION_CONFIG.spin.duration;
+
   return (
     <div
       className="relative flex items-center justify-center"
@@ -44,7 +55,7 @@ export const LuckyWheel = ({
         }}
         animate={{ rotate: totalRotation }}
         transition={{
-          duration: isSpinning ? ANIMATION_CONFIG.spin.duration : 0,
+          duration: isSpinning ? spinDuration : 0,
           ease: ANIMATION_CONFIG.spin.easing,
         }}
       >
@@ -55,8 +66,9 @@ export const LuckyWheel = ({
           className="drop-shadow-2xl"
         >
           {displayPrizes.map((prize, index) => {
-            const startAngle = (index * 90 - 90) * (Math.PI / 180);
-            const endAngle = ((index + 1) * 90 - 90) * (Math.PI / 180);
+            // Tam giác mốc ở bên phải (0°), nên segment bắt đầu từ 0° thay vì -90°
+            const startAngle = index * segmentAngle * (Math.PI / 180);
+            const endAngle = (index + 1) * segmentAngle * (Math.PI / 180);
             const x1 = radius + radius * Math.cos(startAngle);
             const y1 = radius + radius * Math.sin(startAngle);
             const x2 = radius + radius * Math.cos(endAngle);
@@ -68,17 +80,16 @@ export const LuckyWheel = ({
               "Z",
             ].join(" ");
 
-            const isWinner =
-              currentWinner &&
-              prize.id === currentWinner.prizeId &&
-              !isSpinning;
+            const isMaxPrize =
+              maxPrizeTier && prize.tier === maxPrizeTier && !isSpinning;
 
-            // 4 màu đỏ phân biệt cho đẹp
+            // 5 màu đỏ phân biệt cho 5 giải
             const segmentColors = [
-              "#DC2626", // Đỏ tươi (Red 600)
-              "#B91C1C", // Đỏ đậm (Red 700)
-              "#991B1B", // Đỏ sẫm (Red 800)
-              "#EF4444", // Đỏ nhạt (Red 500)
+              "#DC2626", // Đỏ tươi - Đặc biệt
+              "#B91C1C", // Đỏ đậm - Nhất
+              "#991B1B", // Đỏ sẫm - Nhì
+              "#EF4444", // Đỏ nhạt - Ba
+              "#F87171", // Đỏ rất nhạt - Tư
             ];
 
             const IconComponent = ICON_MAP[prize.icon] || Gift;
@@ -91,9 +102,14 @@ export const LuckyWheel = ({
                   stroke={COLORS.primary.gold}
                   strokeWidth="2"
                   style={{
-                    filter: isWinner
-                      ? `drop-shadow(0 0 15px ${COLORS.effect.glow})`
+                    filter: isMaxPrize
+                      ? `drop-shadow(0 0 20px ${COLORS.primary.gold}) drop-shadow(0 0 30px ${COLORS.effect.glow})`
                       : "none",
+                    opacity: isMaxPrize
+                      ? 1
+                      : !isSpinning && maxPrizeTier
+                        ? 0.6
+                        : 1,
                   }}
                 />
                 {/* Prize name text */}
@@ -101,12 +117,17 @@ export const LuckyWheel = ({
                   x={radius}
                   y={radius - 40}
                   fill={COLORS.neutral.white}
-                  fontSize="13"
+                  fontSize="12"
                   fontWeight="bold"
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  transform={`rotate(${index * 90 + 45}, ${radius}, ${radius}) translate(0, ${-radius * 0.5})`}
+                  transform={`rotate(${index * segmentAngle + segmentAngle / 2 + 90}, ${radius}, ${radius}) translate(0, ${-radius * 0.55})`}
                   className="pointer-events-none select-none"
+                  style={{
+                    filter: isMaxPrize
+                      ? `drop-shadow(0 0 4px ${COLORS.primary.gold})`
+                      : "none",
+                  }}
                 >
                   {prize.name}
                 </text>
@@ -115,16 +136,33 @@ export const LuckyWheel = ({
                   x={radius}
                   y={radius - 30}
                   fill={COLORS.neutral.white}
-                  fontSize="10"
+                  fontSize="9"
                   fontWeight="normal"
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  transform={`rotate(${index * 90 + 45}, ${radius}, ${radius}) translate(0, ${-radius * 0.3})`}
+                  transform={`rotate(${index * segmentAngle + segmentAngle / 2 + 90}, ${radius}, ${radius}) translate(0, ${-radius * 0.35})`}
                   className="pointer-events-none select-none"
-                  opacity="0.9"
+                  opacity={isMaxPrize ? 1 : 0.9}
+                  style={{
+                    filter: isMaxPrize
+                      ? `drop-shadow(0 0 3px ${COLORS.primary.gold})`
+                      : "none",
+                  }}
                 >
                   {prize.description}
                 </text>
+                {/* Highlight overlay cho giải được chọn */}
+                {isMaxPrize && (
+                  <motion.path
+                    d={pathData}
+                    fill="none"
+                    stroke={COLORS.primary.gold}
+                    strokeWidth="4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: [0.3, 1, 0.3] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  />
+                )}
               </g>
             );
           })}
@@ -149,16 +187,20 @@ export const LuckyWheel = ({
           </motion.div>
         </div>
       </motion.div>
+      {/* Tam giác chỉ định - Ở BÊN PHẢI, CHỈ SANG TRÁI (vào vòng quay) */}
       <div
-        className="absolute -top-8 left-1/2 -translate-x-1/2 z-10"
-        style={{ filter: `drop-shadow(0 2px 8px ${COLORS.effect.shadow})` }}
+        className="absolute top-1/2 -translate-y-1/2 z-10"
+        style={{
+          right: "-40px",
+          filter: `drop-shadow(0 2px 8px ${COLORS.effect.shadow})`,
+        }}
       >
         <div
           className="w-0 h-0"
           style={{
-            borderLeft: "20px solid transparent",
-            borderRight: "20px solid transparent",
-            borderTop: `30px solid ${COLORS.primary.gold}`,
+            borderTop: "20px solid transparent",
+            borderBottom: "20px solid transparent",
+            borderRight: `30px solid ${COLORS.primary.gold}`,
           }}
         />
       </div>

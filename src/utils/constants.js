@@ -4,12 +4,13 @@
 
 // Trạng thái game - REDESIGN theo flow mới
 export const GAME_STATE = {
-  IDLE: "idle", // Chưa bắt đầu - hiển thị nút "Bắt đầu"
-  AUTO_PICKING: "auto_picking", // Đang tự động chọn 4 user (animation lần lượt)
+  IDLE: "idle", // Chưa bắt đầu - chờ chọn users
+  AUTO_PICKING: "auto_picking", // Đang tự động chọn user (animation scroll)
   READY_TO_SPIN: "ready_to_spin", // Đã đủ 4 user, sẵn sàng quay vòng
-  SPINNING: "spinning", // Đang quay vòng (1 lần quay)
-  SPIN_RESULT: "spin_result", // Hiển thị kết quả 1 lần quay
-  COMPLETED: "completed", // Hoàn thành - có thể reset
+  SPINNING: "spinning", // Đang quay vòng để chọn giải trần
+  PRIZES_ALLOCATED: "prizes_allocated", // Đã phân bổ xong 4 giải, 4 bao shake (chờ mở)
+  REVEALING: "revealing", // Đang mở bao để reveal giải
+  ROUND_COMPLETE: "round_complete", // Hoàn thành 1 round (đã mở hết 4 bao)
 };
 
 // Trạng thái người chơi
@@ -64,9 +65,9 @@ export const ANIMATION_CONFIG = {
     duration: 0.6, // Animation bao lì xì mở
   },
   spin: {
-    duration: 4, // Quay 1 vòng - giảm xuống 4s cho nhanh hơn (vì chỉ quay 1 lần)
-    easing: [0.22, 0.61, 0.36, 1], // Ease-out cubic - chậm dần tự nhiên
-    rotations: 5, // Số vòng quay trước khi dừng
+    duration: () => 20 + Math.random() * 20, // Random 20-40s để bất ngờ
+    easing: [0.22, 1, 0.36, 1], // Ease out mượt mà: chậm dần tự nhiên như vòng quay thật
+    rotations: 15, // 15 vòng quay để tăng độ kịch tính (nhiều vòng hơn)
   },
   winnerHighlight: {
     duration: 1.5, // Highlight người trúng

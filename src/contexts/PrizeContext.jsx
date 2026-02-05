@@ -1,4 +1,10 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 
 import { SAMPLE_PRIZES } from "../utils/mockData";
 
@@ -23,27 +29,33 @@ export const PrizeProvider = ({ children }) => {
     localStorage.setItem("spin-reward-prizes", JSON.stringify(prizes));
   }, [prizes]);
 
-  const updatePrize = (prizeId, updates) => {
+  const updatePrize = useCallback((prizeId, updates) => {
     setPrizes((prev) =>
       prev.map((prize) =>
         prize.id === prizeId ? { ...prize, ...updates } : prize,
       ),
     );
-  };
+  }, []);
 
-  const updatePrizeQuantity = (prizeId, quantity) => {
-    updatePrize(prizeId, { quantity: Math.max(0, quantity) });
-  };
+  const updatePrizeQuantity = useCallback(
+    (prizeId, quantity) => {
+      updatePrize(prizeId, { quantity: Math.max(0, quantity) });
+    },
+    [updatePrize],
+  );
 
-  const updatePrizeWeight = (prizeId, weight) => {
-    updatePrize(prizeId, { weight: Math.max(0, weight) });
-  };
+  const updatePrizeWeight = useCallback(
+    (prizeId, weight) => {
+      updatePrize(prizeId, { weight: Math.max(0, weight) });
+    },
+    [updatePrize],
+  );
 
-  const resetPrizes = () => {
+  const resetPrizes = useCallback(() => {
     setPrizes(SAMPLE_PRIZES);
-  };
+  }, []);
 
-  const getWeightedRandomPrize = (availablePrizes) => {
+  const getWeightedRandomPrize = useCallback((availablePrizes) => {
     const validPrizes = availablePrizes.filter((p) => p.quantity > 0);
     if (validPrizes.length === 0) return null;
 
@@ -59,7 +71,7 @@ export const PrizeProvider = ({ children }) => {
     }
 
     return validPrizes[0];
-  };
+  }, []);
 
   return (
     <PrizeContext.Provider

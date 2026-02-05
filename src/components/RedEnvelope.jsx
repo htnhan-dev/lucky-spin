@@ -2,29 +2,35 @@ import { useEffect, useState } from "react";
 
 import { COLORS } from "../utils/constants";
 import confetti from "canvas-confetti";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { X } from "lucide-react";
 
 export const RedEnvelope = ({
   index,
   user,
-  isWinner,
+  prize, // Giải thưởng của user này
   isSelected,
   isHighlighted,
   canClick,
+  canReveal, // Có thể mở bao (shake state)
+  isRevealing, // Đang mở bao (paper scroll ra)
+  isRevealed, // Đã mở xong
   onClick,
+  onReveal, // Callback khi click để mở bao
+  onRemove, // Callback để xóa user khỏi envelope
 }) => {
   const [showConfetti, setShowConfetti] = useState(false);
 
   useEffect(() => {
-    if (isWinner && !showConfetti) {
+    if (isRevealed && !showConfetti) {
       const timer = setTimeout(() => {
         const el = document.getElementById(`envelope-${index}`);
         if (!el) return;
 
         const rect = el.getBoundingClientRect();
         confetti({
-          particleCount: 100,
-          spread: 70,
+          particleCount: 50,
+          spread: 60,
           origin: {
             x: (rect.left + rect.width / 2) / window.innerWidth,
             y: (rect.top + rect.height / 2) / window.innerHeight,
@@ -37,10 +43,14 @@ export const RedEnvelope = ({
 
       return () => clearTimeout(timer);
     }
-  }, [isWinner, showConfetti, index]);
+  }, [isRevealed, showConfetti, index]);
 
   const handleClick = () => {
-    if (canClick && onClick) onClick();
+    if (canClick && onClick) {
+      onClick();
+    } else if (canReveal && !isRevealed && onReveal) {
+      onReveal();
+    }
   };
 
   return (
@@ -50,21 +60,25 @@ export const RedEnvelope = ({
       animate={{
         y: 0,
         opacity: 1,
-        scale: isWinner ? [1, 1.2, 1] : 1,
+        scale: canReveal && !isRevealed ? [1, 1.05, 1] : 1, // Shake effect
       }}
       transition={{
         delay: 0.6 + index * 0.15,
         type: "spring",
         stiffness: 100,
-        scale: { duration: 0.8, repeat: isWinner ? 2 : 0 },
+        scale: {
+          duration: 0.5,
+          repeat: canReveal && !isRevealed ? Infinity : 0, // Lắc liên tục khi có thể mở
+        },
       }}
-      whileHover={canClick ? { scale: 1.08 } : {}}
+      whileHover={(canClick || canReveal) && !isRevealed ? { scale: 1.08 } : {}}
       onClick={handleClick}
-      className={`text-center ${canClick ? "cursor-pointer" : ""}`}
+      className={`relative text-center ${(canClick || canReveal) && !isRevealed ? "cursor-pointer" : ""}`}
     >
+      {/* Envelope container */}
       <motion.div className="relative">
-        {/* Outer glow for winner */}
-        {isWinner && (
+        {/* Outer glow khi revealed */}
+        {isRevealed && prize && (
           <motion.div
             className="absolute inset-0 rounded-xl"
             style={{
@@ -79,16 +93,25 @@ export const RedEnvelope = ({
         <div
           className="relative w-28 h-40 rounded-xl flex flex-col items-center justify-center overflow-hidden shadow-xl"
           style={{
-            background: isWinner
-              ? `linear-gradient(135deg, ${COLORS.primary.gold} 0%, ${COLORS.primary.lightGold || "#DAA520"} 100%)`
-              : `linear-gradient(135deg, ${COLORS.primary.red} 0%, ${COLORS.primary.darkRed} 100%)`,
-            boxShadow: isWinner
+            background:
+              isRevealed && prize
+                ? `linear-gradient(135deg, ${COLORS.primary.gold} 0%, ${COLORS.primary.lightGold || "#DAA520"} 100%)`
+                : `linear-gradient(135deg, ${COLORS.primary.red} 0%, ${COLORS.primary.darkRed} 100%)`,
+            boxShadow: isRevealed
               ? `0 0 40px ${COLORS.primary.gold}A0,
                  inset 0 0 20px rgba(255,255,255,0.2),
                  0 10px 30px rgba(0,0,0,0.3)`
-              : `0 12px 24px rgba(0,0,0,0.3),
-                 inset 0 1px 0 rgba(255,255,255,0.1)`,
-            border: isWinner ? `3px solid ${COLORS.primary.gold}` : "none",
+              : canReveal
+                ? `0 0 20px ${COLORS.accent.amber}80,
+                   0 12px 24px rgba(0,0,0,0.3),
+                   inset 0 1px 0 rgba(255,255,255,0.1)`
+                : `0 12px 24px rgba(0,0,0,0.3),
+                   inset 0 1px 0 rgba(255,255,255,0.1)`,
+            border: isRevealed
+              ? `3px solid ${COLORS.primary.gold}`
+              : canReveal
+                ? `2px solid ${COLORS.accent.amber}`
+                : "none",
           }}
         >
           {/* Shine */}
@@ -121,37 +144,45 @@ export const RedEnvelope = ({
           >
             {user ? (
               <>
+                {/* Emoji bao lì xì */}
                 <motion.div
                   className="mb-2 text-3xl"
                   animate={{
-                    rotate: isWinner ? [0, 10, -10, 0] : 0,
+                    rotate: canReveal && !isRevealed ? [0, 5, -5, 0] : 0,
                   }}
                   transition={{
-                    duration: 0.6,
-                    repeat: isWinner ? 2 : 0,
+                    duration: 0.5,
+                    repeat: canReveal && !isRevealed ? Infinity : 0,
                   }}
                 >
                   🧧
                 </motion.div>
 
+                {/* Tên người */}
                 <div
-                  className="text-xs font-bold leading-tight truncate px-1"
+                  className="text-xs mt-2! font-bold leading-tight px-2 wrap-break-word"
                   style={{
-                    color: isWinner
+                    color: isRevealed
                       ? COLORS.primary.darkRed
                       : COLORS.primary.gold,
+                    wordBreak: "break-word",
+                    overflowWrap: "break-word",
+                    hyphens: "auto",
                   }}
                 >
                   {user.name}
                 </div>
 
-                {isWinner && (
+                {/* Hiển thị tên giải khi đã mở */}
+                {isRevealed && prize && (
                   <motion.div
-                    className="text-xl mt-1"
-                    animate={{ scale: [1, 1.3, 1] }}
-                    transition={{ duration: 0.5 }}
+                    className="text-[10px] font-black mt-1 leading-tight px-1"
+                    style={{ color: COLORS.primary.darkRed }}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.3, duration: 0.4 }}
                   >
-                    ⭐
+                    {prize.name}
                   </motion.div>
                 )}
               </>
@@ -166,6 +197,45 @@ export const RedEnvelope = ({
           </motion.div>
         </div>
       </motion.div>
+
+      {/* Paper scroll animation khi mở bao */}
+      <AnimatePresence>
+        {isRevealing && prize && (
+          <motion.div
+            initial={{ y: 100, opacity: 0, scale: 0.8 }}
+            animate={{ y: -60, opacity: 1, scale: 1 }}
+            exit={{ y: -80, opacity: 0 }}
+            transition={{ duration: 1.5, ease: "easeOut" }}
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-32 bg-yellow-50 rounded-lg shadow-2xl p-3 border-2 border-yellow-600 z-50"
+          >
+            <div className="text-center">
+              <div className="text-lg font-black text-red-600 mb-1">
+                {prize.name}
+              </div>
+              <div className="text-xs text-gray-700 font-semibold">
+                {prize.description}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Nút xóa user - Hiện khi đã selected và chưa spin */}
+      {isSelected && !canReveal && !isRevealed && onRemove && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: 1, scale: 1 }}
+          onClick={(e) => {
+            e.stopPropagation(); // Không trigger onClick của envelope
+            onRemove();
+          }}
+          className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg z-50 hover:bg-red-600 transition-colors"
+          whileHover={{ scale: 1.2 }}
+          whileTap={{ scale: 0.9 }}
+        >
+          <X className="w-4 h-4" />
+        </motion.button>
+      )}
 
       {isSelected && (
         <motion.div

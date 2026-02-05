@@ -1,4 +1,5 @@
 import { RefreshCw, RotateCw } from "lucide-react";
+import { useState } from "react";
 
 import { COLORS } from "../utils/constants";
 import { FallingEnvelopes } from "../components/FallingEnvelopes";
@@ -7,6 +8,7 @@ import { PrizeList } from "../components/PrizeList";
 import { RedEnvelope } from "../components/RedEnvelope";
 import { SAMPLE_USERS } from "../utils/mockData";
 import { UserList } from "../components/UserList";
+import { UserImportModal } from "../components/UserImportModal";
 import { motion } from "framer-motion";
 import { usePrizes } from "../contexts/PrizeContext";
 import { useSpinGame } from "../hooks/useSpinGame";
@@ -16,7 +18,20 @@ import { useSpinGame } from "../hooks/useSpinGame";
  * Layout: UserList (left) | Wheel + Envelopes (center) | PrizeList (right)
  */
 export const LuckySpinPage = () => {
-  const { prizes } = usePrizes();
+  const { prizes, updatePrizeQuantity, resetPrizes } = usePrizes();
+  const [users, setUsers] = useState(SAMPLE_USERS);
+
+  const handleImportUsers = (importedUsers) => {
+    setUsers(importedUsers);
+  };
+
+  const handleResetAll = () => {
+    if (confirm("Bạn có chắc muốn reset tất cả giải thưởng và game?")) {
+      resetPrizes(); // Reset prizes về mặc định
+      resetGame(); // Reset game state
+      window.location.reload(); // Reload để apply changes
+    }
+  };
 
   const {
     gameState,
@@ -27,6 +42,10 @@ export const LuckySpinPage = () => {
     isAnimating,
     highlightedUserId,
     highlightedEnvelopeIndex,
+    maxPrizeTier,
+    userPrizes,
+    openedEnvelopes,
+    revealingEnvelope,
     startGame,
     spinWheel,
     resetGame,
@@ -34,12 +53,16 @@ export const LuckySpinPage = () => {
     canSpin,
     isSpinning,
     hasWinner,
-  } = useSpinGame(SAMPLE_USERS, prizes);
+    removeSelectedUser,
+    exportHistoryCSV,
+    revealEnvelope,
+    canRevealEnvelopes,
+  } = useSpinGame(users, prizes, updatePrizeQuantity);
 
   return (
     <div className="min-h-screen w-full relative overflow-hidden bg-linear-to-br from-slate-50 via-orange-50 to-red-50">
-      {/* Celebration Animation */}
-      <FallingEnvelopes trigger={hasWinner} />
+      {/* Celebration Animation - Trigger khi vòng quay xong (PRIZES_ALLOCATED) */}
+      <FallingEnvelopes trigger={canRevealEnvelopes} />
 
       {/* Subtle Background Pattern */}
       <div
@@ -53,79 +76,139 @@ export const LuckySpinPage = () => {
       {/* Main Content */}
       <div className="relative z-10 min-h-screen flex flex-col">
         {/* LEFT BANNER - Vertical Text */}
-        <div className="fixed left-0 top-1/2 -translate-y-1/2 z-20">
+        <motion.div
+          className="fixed left-0 top-1/2 -translate-y-1/2 z-20"
+          initial={{ x: -100, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+        >
           <div
-            className="flex flex-col items-center px-6 py-20"
+            className="flex flex-col items-center px-6 py-20 relative overflow-hidden"
             style={{
               backgroundColor: "#C81D25",
               border: "4px solid #FACC15",
               borderLeft: "none",
               borderTopRightRadius: "32px",
               borderBottomRightRadius: "32px",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+              boxShadow:
+                "0 10px 30px rgba(0,0,0,0.35), inset 0 0 20px rgba(250, 204, 21, 0.2)",
             }}
           >
-            {["NĂM", "MỚI", "BÌNH", "AN"].map((word) => (
-              <div
+            {/* Shimmer effect overlay */}
+            <motion.div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)",
+              }}
+              animate={{
+                x: ["-100%", "200%"],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                repeatDelay: 2,
+                ease: "linear",
+              }}
+            />
+
+            {["Xuân", "sang", "vạn", "sự", "lành"].map((word, index) => (
+              <motion.div
                 key={word}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5 + index * 0.1 }}
                 style={{
                   color: "#FACC15",
                   fontWeight: 900,
                   fontSize: "28px",
                   lineHeight: "1.2",
                   marginBottom: "10px",
-                  textShadow: "2px 2px 0 rgba(0,0,0,0.4)",
+                  textShadow:
+                    "2px 2px 0 rgba(0,0,0,0.4), 0 0 10px rgba(250, 204, 21, 0.5)",
                   fontFamily: "'Noto Serif', 'Playfair Display', serif",
                   letterSpacing: "0.05em",
+                  position: "relative",
+                  zIndex: 1,
                 }}
               >
                 {word}
-              </div>
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* RIGHT BANNER - Vertical Text */}
-        <div className="fixed right-0 top-1/2 -translate-y-1/2 z-20">
+        <motion.div
+          className="fixed right-0 top-1/2 -translate-y-1/2 z-20"
+          initial={{ x: 100, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+        >
           <div
-            className="flex flex-col items-center px-6 py-20"
+            className="flex flex-col items-center px-6 py-20 relative overflow-hidden"
             style={{
               backgroundColor: "#C81D25",
               border: "4px solid #FACC15",
               borderRight: "none",
               borderTopLeftRadius: "32px",
               borderBottomLeftRadius: "32px",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+              boxShadow:
+                "0 10px 30px rgba(0,0,0,0.35), inset 0 0 20px rgba(250, 204, 21, 0.2)",
             }}
           >
-            {["AN", "KHANG", "THỊNH", "VƯỢNG"].map((word) => (
-              <div
+            {/* Shimmer effect overlay */}
+            <motion.div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)",
+              }}
+              animate={{
+                x: ["-100%", "200%"],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                repeatDelay: 2,
+                ease: "linear",
+              }}
+            />
+
+            {["Tết", "đến", "muôn", "điều", "tốt"].map((word, index) => (
+              <motion.div
                 key={word}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5 + index * 0.1 }}
                 style={{
                   color: "#FACC15",
                   fontWeight: 900,
-                  fontSize: "28px",
+                  fontSize: "20px",
                   lineHeight: "1.2",
                   marginBottom: "10px",
-                  textShadow: "2px 2px 0 rgba(0,0,0,0.4)",
+                  textShadow:
+                    "2px 2px 0 rgba(0,0,0,0.4), 0 0 10px rgba(250, 204, 21, 0.5)",
                   fontFamily: "'Noto Serif', 'Playfair Display', serif",
                   letterSpacing: "0.05em",
+                  position: "relative",
+                  zIndex: 1,
                 }}
               >
                 {word}
-              </div>
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* Header */}
         <motion.div
-          className="text-center py-8"
+          className="text-center pt-2!"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
         >
           <h1
-            className="text-7xl font-black tracking-tight"
+            className="text-5xl font-black tracking-tight"
             style={{
               background: `linear-gradient(135deg, ${COLORS.primary.red} 0%, ${COLORS.primary.gold} 100%)`,
               WebkitBackgroundClip: "text",
@@ -145,7 +228,7 @@ export const LuckySpinPage = () => {
                 🎉
               </>
             ) : (
-              <>👉 Click "Quay vòng quay" to spin the lucky wheel</>
+              <> Khai xuân mở vận – Bứt phá thành công</>
             )}
           </p>
         </motion.div>
@@ -161,15 +244,17 @@ export const LuckySpinPage = () => {
                 animate={{ opacity: 1, x: 0 }}
               >
                 <UserList
-                  users={SAMPLE_USERS}
+                  users={users}
                   selectedUsers={selectedUsers}
                   highlightedUserId={highlightedUserId}
+                  onRemoveSelectedUser={removeSelectedUser}
+                  onImportUsers={handleImportUsers}
                 />
               </motion.div>
             </div>
 
             {/* CENTER: Wheel + 4 Envelopes + Buttons */}
-            <div className="col-span-6 flex flex-col items-center justify-center gap-8">
+            <div className="col-span-6 flex flex-col items-center justify-center gap-5">
               {/* Lucky Wheel */}
               <motion.div
                 initial={{ scale: 0, opacity: 0 }}
@@ -178,69 +263,129 @@ export const LuckySpinPage = () => {
               >
                 <LuckyWheel
                   prizes={prizes}
-                  selectedUsers={selectedUsers}
-                  currentWinner={currentWinner}
+                  maxPrizeTier={maxPrizeTier}
                   isSpinning={isSpinning}
                 />
               </motion.div>
 
+              {/* Message khi chưa chọn đủ */}
+              {/* {selectedUsers.length < 4 && selectedUsers.length > 0 && (
+                
+              )} */}
+              <motion.div
+                className="text-center px-6! py-1! rounded-xl bg-amber-100 border-2 border-amber-400"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <p className="text-amber-800 font-bold text-sm">
+                  ⏳ Chọn đủ 4 người để bắt đầu quay ({selectedUsers.length}
+                  /4)
+                </p>
+              </motion.div>
+
               {/* 4 Red Envelopes - Horizontal */}
               <div className="flex items-center justify-center gap-6">
-                {[0, 1, 2, 3].map((index) => (
-                  <RedEnvelope
-                    key={index}
-                    index={index}
-                    user={selectedUsers[index] || null}
-                    isWinner={
-                      currentWinner &&
-                      selectedUsers[index] &&
-                      currentWinner.id === selectedUsers[index].id
-                    }
-                    isSelected={!!selectedUsers[index]}
-                    onClick={startGame}
-                    canClick={canPickUser && !selectedUsers[index]}
-                    isHighlighted={highlightedEnvelopeIndex === index}
-                  />
-                ))}
+                {[0, 1, 2, 3].map((index) => {
+                  const allocation = userPrizes[index]; // { user, prize }
+                  return (
+                    <RedEnvelope
+                      key={index}
+                      index={index}
+                      user={selectedUsers[index] || null}
+                      prize={allocation?.prize || null}
+                      isSelected={!!selectedUsers[index]}
+                      onClick={startGame}
+                      onReveal={() => revealEnvelope(index)}
+                      onRemove={
+                        selectedUsers[index]
+                          ? () => removeSelectedUser(selectedUsers[index].id)
+                          : null
+                      }
+                      canClick={canPickUser && !selectedUsers[index]}
+                      canReveal={
+                        canRevealEnvelopes && !openedEnvelopes.includes(index)
+                      }
+                      isRevealing={revealingEnvelope === index}
+                      isRevealed={openedEnvelopes.includes(index)}
+                      isHighlighted={highlightedEnvelopeIndex === index}
+                    />
+                  );
+                })}
               </div>
-
-              {/* Message khi chưa chọn đủ */}
-              {selectedUsers.length < 4 && selectedUsers.length > 0 && (
-                <motion.div
-                  className="text-center px-6 py-3 rounded-xl bg-amber-100 border-2 border-amber-400"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <p className="text-amber-800 font-bold text-sm">
-                    ⏳ Chọn đủ 4 người để bắt đầu quay ({selectedUsers.length}
-                    /4)
-                  </p>
-                </motion.div>
-              )}
 
               {/* Action Buttons */}
               <div className="flex items-center gap-6">
                 {/* Quay vòng quay */}
                 <motion.button
                   onClick={spinWheel}
-                  disabled={!canSpin}
-                  className="px-14 py-6 rounded-2xl font-black text-2xl flex items-center gap-4 shadow-2xl disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  disabled={!canSpin || isSpinning}
+                  className="
+    relative
+    px-16 py-7
+    rounded-3xl
+    font-black
+    text-2xl
+    flex items-center gap-4
+    transition-all
+    disabled:opacity-40
+    disabled:cursor-not-allowed
+    overflow-hidden
+  "
                   style={{
                     background: canSpin
-                      ? `linear-gradient(135deg, ${COLORS.primary.gold} 0%, #DAA520 100%)`
+                      ? `linear-gradient(135deg, ${COLORS.primary.gold} 0%, #E6B800 50%, #C99700 100%)`
                       : "#9CA3AF",
                     color: "#1F2937",
-                    border: `4px solid ${canSpin ? "#FFF" : "#6B7280"}`,
+                    border: `4px solid ${canSpin ? "#FFF7CC" : "#6B7280"}`,
+                    boxShadow: canSpin
+                      ? `
+        inset 0 2px 0 rgba(255,255,255,0.6),
+        inset 0 -4px 0 rgba(0,0,0,0.2),
+        0 18px 35px rgba(0,0,0,0.35),
+        0 0 25px ${COLORS.primary.gold}80
+      `
+                      : "0 10px 20px rgba(0,0,0,0.25)",
                   }}
-                  whileHover={canSpin ? { scale: 1.08, y: -2 } : {}}
-                  whileTap={canSpin ? { scale: 0.98 } : {}}
+                  whileHover={
+                    canSpin
+                      ? {
+                          scale: 1.1,
+                          y: -4,
+                          boxShadow: `
+            inset 0 2px 0 rgba(255,255,255,0.7),
+            inset 0 -4px 0 rgba(0,0,0,0.25),
+            0 25px 45px rgba(0,0,0,0.45),
+            0 0 40px ${COLORS.primary.gold}
+          `,
+                        }
+                      : {}
+                  }
+                  whileTap={canSpin ? { scale: 0.96, y: 0 } : {}}
                   initial={{ scale: 0 }}
                   animate={{ scale: canSpin ? 1 : 0.9 }}
                 >
+                  {/* Shine chạy ngang */}
+                  {canSpin && !isSpinning && (
+                    <motion.span
+                      className="absolute inset-0"
+                      style={{
+                        background:
+                          "linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.6) 50%, transparent 70%)",
+                      }}
+                      animate={{ x: ["-100%", "100%"] }}
+                      transition={{ duration: 2.5, repeat: Infinity }}
+                    />
+                  )}
+
+                  {/* Nội dung */}
                   <RotateCw
-                    className={`w-8 h-8 ${isSpinning ? "animate-spin" : ""}`}
+                    className={`w-9 h-9 z-10 ${
+                      isSpinning ? "animate-spin text-red-700" : ""
+                    }`}
                   />
-                  Quay vòng quay
+                  <span className="z-10 tracking-wide">
+                    {isSpinning ? "Đang quay..." : "Quay vòng quay"}
+                  </span>
                 </motion.button>
 
                 {/* Chơi lại */}
@@ -279,107 +424,26 @@ export const LuckySpinPage = () => {
         </div>
       </div>
 
-      {/* Winner Modal - Modern */}
-      {hasWinner && currentWinner && (
-        <motion.div
-          className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 px-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          <motion.div
-            className="bg-white rounded-3xl p-12 max-w-xl w-full text-center shadow-2xl relative overflow-hidden"
-            initial={{ scale: 0.5, y: 50 }}
-            animate={{ scale: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 200, damping: 20 }}
-          >
-            {/* Decorative gradient overlay */}
-            <div
-              className="absolute top-0 left-0 right-0 h-2"
-              style={{
-                background: `linear-gradient(90deg, ${COLORS.primary.red}, ${COLORS.primary.gold}, ${COLORS.primary.red})`,
-              }}
-            />
+      {/* Reset All Button - Fixed góc phải cuối màn hình */}
+      <motion.button
+        onClick={handleResetAll}
+        className="fixed bottom-6 right-6 z-30 px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 shadow-2xl"
+        style={{
+          background: `linear-gradient(135deg, ${COLORS.primary.red} 0%, ${COLORS.primary.darkRed} 100%)`,
+          color: "#FFF",
+          border: `2px solid ${COLORS.primary.gold}`,
+        }}
+        whileHover={{ scale: 1.05, y: -2 }}
+        whileTap={{ scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 1 }}
+      >
+        <RefreshCw className="w-5 h-5" />
+        Reset Tất Cả
+      </motion.button>
 
-            {/* Content */}
-            <motion.div
-              className="text-8xl mb-4"
-              animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.2, 1] }}
-              transition={{ duration: 0.6 }}
-            >
-              🎉
-            </motion.div>
-
-            <h2
-              className="text-5xl font-black mb-6"
-              style={{
-                background: `linear-gradient(135deg, ${COLORS.primary.red} 0%, ${COLORS.primary.gold} 100%)`,
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
-              CHÚC MỪNG!
-            </h2>
-
-            <div className="text-4xl font-bold mb-3 text-gray-900">
-              {currentWinner.name}
-            </div>
-
-            <p className="text-xl text-gray-600 mb-2">
-              Trúng giải:{" "}
-              <span
-                className="font-black text-3xl block mt-2"
-                style={{
-                  color: COLORS.primary.gold,
-                  textShadow: `0 2px 10px ${COLORS.primary.gold}40`,
-                }}
-              >
-                {spinHistory[spinHistory.length - 1]?.prize?.description ||
-                  spinHistory[spinHistory.length - 1]?.prize?.name ||
-                  "N/A"}
-              </span>
-            </p>
-
-            <p className="text-sm text-gray-500 mb-8">
-              🎁 {spinHistory[spinHistory.length - 1]?.prize?.name || ""}
-            </p>
-
-            {/* Buttons */}
-            <div className="flex gap-4 justify-center">
-              <motion.button
-                onClick={spinWheel}
-                disabled={!canSpin}
-                className="px-8 py-4 rounded-xl font-bold text-lg shadow-lg disabled:opacity-50"
-                style={{
-                  background: canSpin
-                    ? `linear-gradient(135deg, ${COLORS.primary.gold} 0%, #DAA520 100%)`
-                    : "#9CA3AF",
-                  color: "#1F2937",
-                  border: "2px solid #FFF",
-                }}
-                whileHover={canSpin ? { scale: 1.05 } : {}}
-                whileTap={canSpin ? { scale: 0.95 } : {}}
-              >
-                Quay Lại
-              </motion.button>
-
-              <motion.button
-                onClick={resetGame}
-                className="px-8 py-4 rounded-xl font-bold text-lg shadow-lg"
-                style={{
-                  background: "#FFF",
-                  color: COLORS.primary.red,
-                  border: `2px solid ${COLORS.primary.gold}`,
-                }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Chơi Lượt Mới
-              </motion.button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
+      {/* REMOVED: Winner Modal - Không cần nữa vì paper scroll đã hiển thị giải */}
     </div>
   );
 };
