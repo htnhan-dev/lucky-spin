@@ -54,21 +54,25 @@ export const LuckyWheel = ({
       style={{ perspective: "1000px" }}
     >
       <motion.div
+        key={`wheel-${maxPrizeTier || "initial"}`} // Force reset khi chơi vòng mới
         className="relative"
         style={{
           width: radius * 2,
           height: radius * 2,
           transformStyle: "preserve-3d",
-          // Khi đã dừng: fix vị trí bằng style.rotate để KHÔNG re-animate
-          rotate:
-            maxPrizeTier && !isSpinning ? `${finalRotation}deg` : undefined,
         }}
         initial={{ rotate: 0 }}
-        animate={isSpinning ? { rotate: finalRotation } : {}}
-        transition={{
-          duration: actualDuration,
-          ease: ANIMATION_CONFIG.spin.easing,
-        }}
+        animate={
+          isSpinning ? { rotate: finalRotation } : { rotate: finalRotation }
+        }
+        transition={
+          isSpinning
+            ? {
+                duration: actualDuration,
+                ease: ANIMATION_CONFIG.spin.easing,
+              }
+            : { duration: 0 } // Khi dừng: không animation (giữ nguyên vị trí)
+        }
       >
         <svg
           width={radius * 2}

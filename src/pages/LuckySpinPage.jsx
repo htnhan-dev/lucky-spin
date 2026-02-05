@@ -280,7 +280,6 @@ export const LuckySpinPage = () => {
                 transition={{ delay: 0.3, type: "spring", stiffness: 100 }}
               >
                 <LuckyWheel
-                  key={maxPrizeTier || "initial"} // Force reset component khi chơi vòng mới
                   prizes={prizes}
                   maxPrizeTier={maxPrizeTier}
                   isSpinning={isSpinning}

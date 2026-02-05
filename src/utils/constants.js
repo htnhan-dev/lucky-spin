@@ -65,7 +65,7 @@ export const ANIMATION_CONFIG = {
     duration: 0.6, // Animation bao lì xì mở
   },
   spin: {
-    duration: 25, // FIXED 25s để đảm bảo timing sync chính xác (không còn giật)
+    duration: 6, // FIXED 6s để đảm bảo timing sync chính xác (không còn giật)
     easing: [0.22, 1, 0.36, 1], // Ease out mượt mà: chậm dần tự nhiên như vòng quay thật
     rotations: 15, // 15 vòng quay để tăng độ kịch tính (nhiều vòng hơn)
   },

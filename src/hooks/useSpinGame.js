@@ -65,13 +65,13 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
 
     // Animation: Nhảy RANDOM qua các users - NHANH HƠN để mượt mà
     let currentScroll = 0;
-    const scrollSpeed = 300; // Nhanh hơn (500ms → 250ms)
-    const minScrolls = 8; // Tăng số lần scroll để vẫn có hiệu ứng dài
-    const maxScrolls = 16;
+    const scrollSpeed = 250; // Nhanh hơn (500ms → 200ms)
+    const minScrolls = 5; // Tăng số lần scroll để vẫn có hiệu ứng dài
+    const maxScrolls = 10;
 
     const totalScrolls =
       Math.floor(Math.random() * (maxScrolls - minScrolls + 1)) + minScrolls;
-    const maxStep = 15; // bước nhảy tối đa
+    const maxStep = 10; // bước nhảy tối đa
 
     let currentIndex = Math.floor(Math.random() * availableUsers.length);
 
@@ -140,8 +140,12 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
         ? ANIMATION_CONFIG.spin.duration()
         : ANIMATION_CONFIG.spin.duration;
 
-    // Lưu duration để pass xuống LuckyWheel component
+    // QUAN TRỌNG: Chọn giải trần TRƯỚC khi bắt đầu animation
+    const tierFromWheel = selectMaxPrizeTier(availablePrizes);
+
+    // Lưu duration và maxPrizeTier để pass xuống LuckyWheel component
     setCurrentSpinDuration(spinDuration);
+    setMaxPrizeTier(tierFromWheel); // Set NGAY để wheel biết đích đến
     setIsAnimating(true);
     setGameState(GAME_STATE.SPINNING);
 
@@ -151,9 +155,6 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
       setIsAnimating(false);
       setGameState(GAME_STATE.PRIZES_ALLOCATED);
 
-      // Bước 1: Vòng quay chọn GIẢI TRẦN
-      const tierFromWheel = selectMaxPrizeTier(availablePrizes);
-
       // Bước 2: Phân bổ 4 giải cho 4 users dựa trên giải trần
       const allocations = allocatePrizesForUsers(
         selectedUsers,
@@ -161,32 +162,10 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
         tierFromWheel,
       );
 
-      // Bước 3: Cập nhật available prizes (giảm quantity)
-      const updatedPrizes = availablePrizes
-        .map((p) => {
-          const usedCount = allocations.filter(
-            (a) => a.prize.id === p.id,
-          ).length;
-          const newQuantity = Math.max(0, p.quantity - usedCount);
-
-          // Update context để sync với wheel display
-          if (updatePrizeQuantity && usedCount > 0) {
-            updatePrizeQuantity(p.id, newQuantity);
-          }
-
-          return {
-            ...p,
-            quantity: newQuantity,
-          };
-        })
-        .filter((p) => p.quantity > 0); // Loại bỏ giải hết khỏi availablePrizes
-
-      // Bước 4: Set all states - wheel đã dừng rồi nên set maxPrizeTier không gây giật
-      setMaxPrizeTier(tierFromWheel);
+      // Bước 3: Set userPrizes (CHƯA trừ số lượng - đợi mở hết 4 bao)
       setUserPrizes(allocations);
-      setAvailablePrizes(updatedPrizes);
-    }, spinDuration * 1000); // Đợi animation vòng quay xong (20-30s)
-  }, [gameState, selectedUsers, availablePrizes, updatePrizeQuantity]);
+    }, spinDuration * 1000); // Đợi animation vòng quay xong (25s)
+  }, [gameState, selectedUsers, availablePrizes]);
   // Remove a selected user by id so another user can be chosen in their place
   const removeSelectedUser = useCallback((userId) => {
     setSelectedUsers((prev) => prev.filter((u) => u.id !== userId));
@@ -256,12 +235,40 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
         // Kiểm tra đã mở hết 4 bao chưa
         if (openedEnvelopes.length + 1 >= 4) {
           setGameState(GAME_STATE.ROUND_COMPLETE);
+
+          // ĐÃ MỞ HẾT 4 BAO → Bây giờ mới trừ số lượng tồn kho
+          const updatedPrizes = availablePrizes
+            .map((p) => {
+              const usedCount = userPrizes.filter(
+                (a) => a.prize.id === p.id,
+              ).length;
+              const newQuantity = Math.max(0, p.quantity - usedCount);
+
+              // Update context để sync với wheel display
+              if (updatePrizeQuantity && usedCount > 0) {
+                updatePrizeQuantity(p.id, newQuantity);
+              }
+
+              return {
+                ...p,
+                quantity: newQuantity,
+              };
+            })
+            .filter((p) => p.quantity > 0); // Loại bỏ giải hết
+
+          setAvailablePrizes(updatedPrizes);
         } else {
           setGameState(GAME_STATE.PRIZES_ALLOCATED); // Quay lại state shake, chờ mở bao khác
         }
       }, 2000); // 2s cho animation paper scroll
     },
-    [gameState, openedEnvelopes, userPrizes],
+    [
+      gameState,
+      openedEnvelopes,
+      userPrizes,
+      availablePrizes,
+      updatePrizeQuantity,
+    ],
   );
 
   const resetGame = useCallback(() => {
