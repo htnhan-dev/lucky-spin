@@ -50,27 +50,27 @@ export const UserImportModal = ({ onImportUsers }) => {
           Nhập danh sách
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-125 bg-white">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <FileSpreadsheet className="w-5 h-5 text-red-600" />
+      <DialogContent className="sm:max-w-125 bg-white p-0 gap-0">
+        <DialogHeader className="px-6! py-5! border-b bg-white">
+          <DialogTitle className="flex items-center gap-2 text-2xl font-bold text-gray-900">
+            <FileSpreadsheet className="w-6 h-6 text-gray-700" />
             Nhập danh sách người chơi
           </DialogTitle>
-          <DialogDescription className="text-gray-600">
+          <DialogDescription className="text-sm text-gray-600 mt-2">
             Copy danh sách tên từ Excel (một cột) và paste vào đây. Mỗi tên trên
             một dòng.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <label className="text-sm font-medium text-gray-700">
+        <div className="px-6! py-6! bg-gray-50">
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-gray-700">
               Danh sách tên (mỗi dòng một người)
             </label>
             <Textarea
               placeholder={`Ví dụ:\nNguyễn Văn A\nHuỳnh Thiện B\nTrần Thị C`}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              className="min-h-50 font-mono text-sm"
+              className="min-h-50 font-mono text-sm bg-white"
             />
             <p className="text-xs text-gray-500">
               💡 Mẹo: Chọn cột tên trong Excel, copy (Ctrl+C), và paste (Ctrl+V)
@@ -78,7 +78,7 @@ export const UserImportModal = ({ onImportUsers }) => {
             </p>
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="px-6! py-4! border-t bg-white">
           <Button
             type="button"
             variant="outline"
@@ -92,7 +92,7 @@ export const UserImportModal = ({ onImportUsers }) => {
           <Button
             type="button"
             onClick={handleImport}
-            className="bg-red-600 hover:bg-red-700 text-white"
+            className="bg-red-600 hover:bg-red-700 text-white font-semibold"
           >
             Nhập danh sách (
             {inputText.split("\n").filter((l) => l.trim()).length} người)

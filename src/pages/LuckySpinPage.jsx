@@ -1,4 +1,11 @@
-import { RefreshCw, RotateCw } from "lucide-react";
+import {
+  RefreshCw,
+  RotateCw,
+  History,
+  Download,
+  Calendar,
+  Trophy,
+} from "lucide-react";
 import { useState } from "react";
 
 import { COLORS } from "../utils/constants";
@@ -12,6 +19,14 @@ import { UserImportModal } from "../components/UserImportModal";
 import { motion } from "framer-motion";
 import { usePrizes } from "../contexts/PrizeContext";
 import { useSpinGame } from "../hooks/useSpinGame";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "../components/ui/dialog";
+import { Button } from "../components/ui/button";
 
 /**
  * Lucky Spin - Modern Clean Layout
@@ -20,6 +35,7 @@ import { useSpinGame } from "../hooks/useSpinGame";
 export const LuckySpinPage = () => {
   const { prizes, updatePrizeQuantity, resetPrizes } = usePrizes();
   const [users, setUsers] = useState(SAMPLE_USERS);
+  const [showHistory, setShowHistory] = useState(false);
 
   const handleImportUsers = (importedUsers) => {
     setUsers(importedUsers);
@@ -46,6 +62,7 @@ export const LuckySpinPage = () => {
     userPrizes,
     openedEnvelopes,
     revealingEnvelope,
+    currentSpinDuration,
     startGame,
     spinWheel,
     resetGame,
@@ -57,6 +74,7 @@ export const LuckySpinPage = () => {
     exportHistoryCSV,
     revealEnvelope,
     canRevealEnvelopes,
+    allEnvelopesRevealed,
   } = useSpinGame(users, prizes, updatePrizeQuantity);
 
   return (
@@ -208,7 +226,7 @@ export const LuckySpinPage = () => {
           animate={{ opacity: 1, y: 0 }}
         >
           <h1
-            className="text-5xl font-black tracking-tight"
+            className="text-5xl font-black tracking-tight pt-1!"
             style={{
               background: `linear-gradient(135deg, ${COLORS.primary.red} 0%, ${COLORS.primary.gold} 100%)`,
               WebkitBackgroundClip: "text",
@@ -262,9 +280,11 @@ export const LuckySpinPage = () => {
                 transition={{ delay: 0.3, type: "spring", stiffness: 100 }}
               >
                 <LuckyWheel
+                  key={maxPrizeTier || "initial"} // Force reset component khi chơi vòng mới
                   prizes={prizes}
                   maxPrizeTier={maxPrizeTier}
                   isSpinning={isSpinning}
+                  spinDuration={currentSpinDuration}
                 />
               </motion.div>
 
@@ -314,98 +334,31 @@ export const LuckySpinPage = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-6">
-                {/* Quay vòng quay */}
-                <motion.button
+              <div className="flex items-center gap-4">
+                {/* Quay vòng quay - Đặc biệt */}
+                <Button
                   onClick={spinWheel}
                   disabled={!canSpin || isSpinning}
-                  className="
-    relative
-    px-16 py-7
-    rounded-3xl
-    font-black
-    text-2xl
-    flex items-center gap-4
-    transition-all
-    disabled:opacity-40
-    disabled:cursor-not-allowed
-    overflow-hidden
-  "
-                  style={{
-                    background: canSpin
-                      ? `linear-gradient(135deg, ${COLORS.primary.gold} 0%, #E6B800 50%, #C99700 100%)`
-                      : "#9CA3AF",
-                    color: "#1F2937",
-                    border: `4px solid ${canSpin ? "#FFF7CC" : "#6B7280"}`,
-                    boxShadow: canSpin
-                      ? `
-        inset 0 2px 0 rgba(255,255,255,0.6),
-        inset 0 -4px 0 rgba(0,0,0,0.2),
-        0 18px 35px rgba(0,0,0,0.35),
-        0 0 25px ${COLORS.primary.gold}80
-      `
-                      : "0 10px 20px rgba(0,0,0,0.25)",
-                  }}
-                  whileHover={
-                    canSpin
-                      ? {
-                          scale: 1.1,
-                          y: -4,
-                          boxShadow: `
-            inset 0 2px 0 rgba(255,255,255,0.7),
-            inset 0 -4px 0 rgba(0,0,0,0.25),
-            0 25px 45px rgba(0,0,0,0.45),
-            0 0 40px ${COLORS.primary.gold}
-          `,
-                        }
-                      : {}
-                  }
-                  whileTap={canSpin ? { scale: 0.96, y: 0 } : {}}
-                  initial={{ scale: 0 }}
-                  animate={{ scale: canSpin ? 1 : 0.9 }}
+                  size="lg"
+                  className="px-16 py-8 text-xl font-black bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl hover:shadow-red-500/50 transition-all duration-300 hover:scale-105"
                 >
-                  {/* Shine chạy ngang */}
-                  {canSpin && !isSpinning && (
-                    <motion.span
-                      className="absolute inset-0"
-                      style={{
-                        background:
-                          "linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.6) 50%, transparent 70%)",
-                      }}
-                      animate={{ x: ["-100%", "100%"] }}
-                      transition={{ duration: 2.5, repeat: Infinity }}
-                    />
-                  )}
-
-                  {/* Nội dung */}
                   <RotateCw
-                    className={`w-9 h-9 z-10 ${
-                      isSpinning ? "animate-spin text-red-700" : ""
-                    }`}
+                    className={`w-6 h-6 mr-3 ${isSpinning ? "animate-spin" : ""}`}
                   />
-                  <span className="z-10 tracking-wide">
-                    {isSpinning ? "Đang quay..." : "Quay vòng quay"}
-                  </span>
-                </motion.button>
+                  {isSpinning ? "Đang quay..." : "Quay vòng quay"}
+                </Button>
 
-                {/* Chơi lại */}
-                {hasWinner && (
-                  <motion.button
+                {/* Chơi vòng mới - Hiển thị khi mở hết 4 bao lì xì */}
+                {allEnvelopesRevealed && (
+                  <Button
                     onClick={resetGame}
-                    className="px-10 py-5 rounded-2xl font-bold text-xl flex items-center gap-3 shadow-xl"
-                    style={{
-                      background: `linear-gradient(135deg, ${COLORS.primary.red} 0%, ${COLORS.primary.darkRed} 100%)`,
-                      color: "#FFF",
-                      border: `3px solid ${COLORS.primary.gold}`,
-                    }}
-                    whileHover={{ scale: 1.08, y: -2 }}
-                    whileTap={{ scale: 0.98 }}
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
+                    size="lg"
+                    variant="outline"
+                    className="px-12 py-8 text-xl font-bold border-2 hover:bg-gray-50 transition-all duration-300 hover:scale-105 shadow-lg"
                   >
-                    <RefreshCw className="w-6 h-6" />
-                    Chơi lại
-                  </motion.button>
+                    <RefreshCw className="w-6 h-6 mr-3" />
+                    Chơi vòng mới
+                  </Button>
                 )}
               </div>
             </div>
@@ -424,24 +377,143 @@ export const LuckySpinPage = () => {
         </div>
       </div>
 
-      {/* Reset All Button - Fixed góc phải cuối màn hình */}
-      <motion.button
-        onClick={handleResetAll}
-        className="fixed bottom-6 right-6 z-30 px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 shadow-2xl"
-        style={{
-          background: `linear-gradient(135deg, ${COLORS.primary.red} 0%, ${COLORS.primary.darkRed} 100%)`,
-          color: "#FFF",
-          border: `2px solid ${COLORS.primary.gold}`,
-        }}
-        whileHover={{ scale: 1.05, y: -2 }}
-        whileTap={{ scale: 0.95 }}
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 1 }}
-      >
-        <RefreshCw className="w-5 h-5" />
-        Reset Tất Cả
-      </motion.button>
+      {/* Buttons - Fixed góc phải dưới màn hình */}
+      <div className="fixed bottom-6 right-6 z-30 flex flex-col gap-3">
+        {/* Xem lịch sử - Nổi bật */}
+        <Button
+          onClick={() => setShowHistory(true)}
+          variant="outline"
+          className="px-6 py-6 font-bold shadow-xl hover:shadow-blue-500/50 border-2 border-blue-500 text-blue-600 hover:bg-blue-50 hover:border-blue-600 transition-all duration-300 hover:scale-110"
+        >
+          <History className="w-5 h-5 mr-2" />
+          Lịch sử ({spinHistory.length})
+        </Button>
+
+        {/* Reset All - Nổi bật */}
+        <Button
+          onClick={handleResetAll}
+          variant="destructive"
+          className="px-6 py-6 font-bold shadow-xl hover:shadow-red-500/50 transition-all duration-300 hover:scale-110"
+        >
+          <RefreshCw className="w-5 h-5 mr-2" />
+          Reset Tất Cả
+        </Button>
+      </div>
+
+      {/* Modal lịch sử - Shadcn Dialog */}
+      <Dialog open={showHistory} onOpenChange={setShowHistory}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0 gap-0 overflow-hidden">
+          {/* Header - Minimalist */}
+          <DialogHeader className="px-6! py-5! border-b bg-white">
+            <DialogTitle className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+              <History className="w-6 h-6 text-gray-700" />
+              Lịch sử quay thưởng
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Content */}
+          <div className="overflow-y-auto max-h-[calc(90vh-160px)] px-6! py-6! bg-gray-50">
+            {spinHistory.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                  <Calendar className="w-10 h-10 text-gray-400" />
+                </div>
+                <p className="text-base font-semibold text-gray-900 mb-2">
+                  Chưa có lịch sử quay thưởng
+                </p>
+                <p className="text-sm text-gray-500">
+                  Hãy bắt đầu quay vòng quay để ghi lại lịch sử
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {spinHistory
+                  .slice()
+                  .reverse()
+                  .map((entry, idx) => (
+                    <motion.div
+                      key={spinHistory.length - idx - 1}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.03 }}
+                      className="group bg-white rounded-lg border border-gray-200 p-4! hover:border-gray-300 hover:shadow-md transition-all duration-200"
+                    >
+                      <div className="flex items-center justify-between gap-6">
+                        {/* Left: Number & User */}
+                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                          <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-700 shrink-0">
+                            #{idx + 1}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-semibold text-base text-gray-900 truncate">
+                                {entry.user.name}
+                              </p>
+                            </div>
+                            <p className="text-sm text-gray-500 truncate">
+                              {new Date(entry.timestamp).toLocaleString(
+                                "vi-VN",
+                                {
+                                  year: "numeric",
+                                  month: "2-digit",
+                                  day: "2-digit",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                },
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Right: Prize */}
+                        <div className="text-right shrink-0">
+                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-red-50 border border-red-200 mb-1">
+                            <Trophy className="w-4 h-4 text-red-600" />
+                            <span className="font-bold text-sm text-red-700">
+                              {entry.prize.name}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-600 font-medium">
+                            {entry.prize.description}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+              </div>
+            )}
+          </div>
+
+          {/* Footer - Minimalist */}
+          <DialogFooter className="px-6! py-4! border-t bg-white flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-gray-600 mr-10!">
+              <span className="font-medium">Tổng số:</span>
+              <span className="font-bold text-gray-900">
+                {spinHistory.length}
+              </span>
+            </div>
+
+            <Button
+              onClick={() => {
+                const csv = exportHistoryCSV();
+                const blob = new Blob([csv], { type: "text/csv" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `lich-su-quay-thuong-${Date.now()}.csv`;
+                a.click();
+              }}
+              variant="outline"
+              className="font-semibold ml-8"
+              disabled={spinHistory.length === 0}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Tải xuống CSV
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* REMOVED: Winner Modal - Không cần nữa vì paper scroll đã hiển thị giải */}
     </div>

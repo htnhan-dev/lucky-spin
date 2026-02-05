@@ -21,6 +21,7 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
   const [userPrizes, setUserPrizes] = useState([]); // 4 giải đã phân bổ cho 4 users
   const [openedEnvelopes, setOpenedEnvelopes] = useState([]); // Các bao đã mở
   const [revealingEnvelope, setRevealingEnvelope] = useState(null); // Bao đang mở
+  const [currentSpinDuration, setCurrentSpinDuration] = useState(null); // Duration của lần quay hiện tại
 
   const timeoutRefs = useRef([]);
   const clearAllTimeouts = useCallback(() => {
@@ -49,9 +50,12 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     setGameState(GAME_STATE.AUTO_PICKING);
     setIsAnimating(true);
 
-    // Lấy danh sách users chưa được chọn
+    // Lấy danh sách users chưa được chọn VÀ chưa trúng giải trong lịch sử
+    const winnersSet = new Set(spinHistory.map((h) => h.user.id));
     const availableUsers = users.filter(
-      (u) => !selectedUsers.some((su) => su.id === u.id),
+      (u) =>
+        !selectedUsers.some((su) => su.id === u.id) && // Chưa được pick trong lần quay này
+        !winnersSet.has(u.id), // Chưa trúng giải trong lịch sử
     );
     if (availableUsers.length === 0) return;
 
@@ -59,15 +63,15 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     const finalUser =
       availableUsers[Math.floor(Math.random() * availableUsers.length)];
 
-    // Animation: Nhảy RANDOM qua các users - Giảm số lần để scroll mượt hơn
+    // Animation: Nhảy RANDOM qua các users - NHANH HƠN để mượt mà
     let currentScroll = 0;
-    const scrollSpeed = 500; // tốc độ tick
-    const minScrolls = 5;
-    const maxScrolls = 13;
+    const scrollSpeed = 300; // Nhanh hơn (500ms → 250ms)
+    const minScrolls = 8; // Tăng số lần scroll để vẫn có hiệu ứng dài
+    const maxScrolls = 16;
 
     const totalScrolls =
       Math.floor(Math.random() * (maxScrolls - minScrolls + 1)) + minScrolls;
-    const maxStep = 15; // bước nhảy tối đa (có thể đổi 10)
+    const maxStep = 15; // bước nhảy tối đa
 
     let currentIndex = Math.floor(Math.random() * availableUsers.length);
 
@@ -121,7 +125,7 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     }, scrollSpeed);
 
     timeoutRefs.current.push(scrollInterval);
-  }, [gameState, users, selectedUsers]);
+  }, [gameState, users, selectedUsers, spinHistory]);
   const spinWheel = useCallback(() => {
     if (
       gameState !== GAME_STATE.READY_TO_SPIN &&
@@ -130,20 +134,25 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
       return;
     if (selectedUsers.length !== 4) return;
 
-    setIsAnimating(true);
-    setGameState(GAME_STATE.SPINNING);
-
-    // Calculate dynamic duration (function or static value)
+    // Calculate dynamic duration (function or static value) - TÍNH 1 LẦN DUY NHẤT
     const spinDuration =
       typeof ANIMATION_CONFIG.spin.duration === "function"
         ? ANIMATION_CONFIG.spin.duration()
         : ANIMATION_CONFIG.spin.duration;
 
+    // Lưu duration để pass xuống LuckyWheel component
+    setCurrentSpinDuration(spinDuration);
+    setIsAnimating(true);
+    setGameState(GAME_STATE.SPINNING);
+
     // Vòng quay để chọn GIẢI TRẦN (max prize tier)
     setTimeout(() => {
+      // QUAN TRỌNG: Set isAnimating = false TRƯỚC để wheel dừng animation
+      setIsAnimating(false);
+      setGameState(GAME_STATE.PRIZES_ALLOCATED);
+
       // Bước 1: Vòng quay chọn GIẢI TRẦN
       const tierFromWheel = selectMaxPrizeTier(availablePrizes);
-      setMaxPrizeTier(tierFromWheel);
 
       // Bước 2: Phân bổ 4 giải cho 4 users dựa trên giải trần
       const allocations = allocatePrizesForUsers(
@@ -151,7 +160,6 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
         availablePrizes,
         tierFromWheel,
       );
-      setUserPrizes(allocations);
 
       // Bước 3: Cập nhật available prizes (giảm quantity)
       const updatedPrizes = availablePrizes
@@ -173,11 +181,10 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
         })
         .filter((p) => p.quantity > 0); // Loại bỏ giải hết khỏi availablePrizes
 
+      // Bước 4: Set all states - wheel đã dừng rồi nên set maxPrizeTier không gây giật
+      setMaxPrizeTier(tierFromWheel);
+      setUserPrizes(allocations);
       setAvailablePrizes(updatedPrizes);
-
-      // Bước 4: Chuyển sang state PRIZES_ALLOCATED (4 bao shake, chờ mở)
-      setIsAnimating(false);
-      setGameState(GAME_STATE.PRIZES_ALLOCATED);
     }, spinDuration * 1000); // Đợi animation vòng quay xong (20-30s)
   }, [gameState, selectedUsers, availablePrizes, updatePrizeQuantity]);
   // Remove a selected user by id so another user can be chosen in their place
@@ -271,6 +278,7 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     setUserPrizes([]);
     setOpenedEnvelopes([]);
     setRevealingEnvelope(null);
+    setCurrentSpinDuration(null);
   }, [prizes, clearAllTimeouts]);
   return {
     gameState,
@@ -286,6 +294,7 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     userPrizes,
     openedEnvelopes,
     revealingEnvelope,
+    currentSpinDuration, // Duration của lần quay hiện tại (để sync với LuckyWheel)
     // Functions
     startGame,
     spinWheel,

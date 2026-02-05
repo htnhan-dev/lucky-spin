@@ -91,6 +91,7 @@ export const UserList = ({
           const isSelected = isUserSelected(user.id);
           const isWinner = isUserWinner(user.id);
           const isHighlighted = highlightedUserId === user.id;
+          const isNotFocused = highlightedUserId && !isHighlighted; // Có user đang được highlight nhưng không phải user này
 
           return (
             <motion.div
@@ -98,7 +99,11 @@ export const UserList = ({
               data-user-id={user.id}
               className="relative p-1!"
               initial={{ opacity: 1, x: 0 }}
-              animate={{ opacity: 1, x: 0 }}
+              animate={{
+                opacity: isNotFocused ? 0.3 : 1, // Làm mờ các user không focus
+                x: 0,
+              }}
+              transition={{ duration: 0.2 }} // Smooth fade in/out
             >
               <motion.div
                 className="px-3! py-2! rounded-lg text-sm font-semibold transition-all"
@@ -108,7 +113,7 @@ export const UserList = ({
                     : isSelected
                       ? `linear-gradient(135deg, ${COLORS.primary.red}30, ${COLORS.primary.red}15)`
                       : isHighlighted
-                        ? `linear-gradient(135deg, ${COLORS.accent.amber}25, ${COLORS.accent.amber}10)`
+                        ? `linear-gradient(135deg, ${COLORS.accent.amber}40, ${COLORS.accent.amber}20)` // Màu đậm hơn khi highlight
                         : "white",
                   border: `2px solid ${isWinner ? COLORS.primary.gold : isSelected ? COLORS.primary.red : isHighlighted ? COLORS.accent.amber : "#E5E7EB"}`,
                   color:
@@ -116,13 +121,13 @@ export const UserList = ({
                       ? COLORS.neutral.dark
                       : "#6B7280",
                   boxShadow: isHighlighted
-                    ? `0 0 20px ${COLORS.accent.amber}50`
+                    ? `0 0 30px ${COLORS.accent.amber}80, 0 0 15px ${COLORS.accent.amber}60` // Shadow mạnh hơn (2 layers)
                     : isWinner || isSelected
                       ? `0 4px 12px rgba(0,0,0,0.1)`
                       : "none",
                 }}
                 animate={{
-                  scale: isHighlighted ? 1.03 : 1,
+                  scale: isHighlighted ? 1.08 : 1, // Scale lớn hơn (1.03 → 1.08)
                 }}
                 transition={{ duration: 0.15 }}
               >

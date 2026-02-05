@@ -1,5 +1,6 @@
 import { ANIMATION_CONFIG, COLORS } from "../utils/constants";
 import { Award, Gift, Medal, Sparkles, Trophy } from "lucide-react";
+import { useMemo } from "react";
 
 import { motion } from "framer-motion";
 
@@ -16,6 +17,7 @@ export const LuckyWheel = ({
   prizes = [], // Danh sách 5 giải thưởng
   maxPrizeTier = null, // Giải trần từ vòng quay
   isSpinning = false,
+  spinDuration = null, // Duration từ useSpinGame (để sync timing)
 }) => {
   const radius = 160;
   const centerSize = 20;
@@ -29,17 +31,22 @@ export const LuckyWheel = ({
   const segmentAngle = 360 / displayPrizes.length; // 72° cho mỗi giải
   // Tam giác mốc ở bên phải (0°), thêm offset +10° để không dừng giữa 2 giải
   const angleOffset = 10;
-  const targetAngle =
-    maxPrizeIndex >= 0 ? maxPrizeIndex * segmentAngle + angleOffset : 0;
-  const totalRotation = isSpinning
-    ? 360 * ANIMATION_CONFIG.spin.rotations + (360 - targetAngle)
-    : 0;
 
-  // Duration động: gọi function nếu là function, không thì dùng trực tiếp
-  const spinDuration =
-    typeof ANIMATION_CONFIG.spin.duration === "function"
+  // useMemo để KHÓA rotation - chỉ tính 1 lần khi maxPrizeTier thay đổi
+  const finalRotation = useMemo(() => {
+    if (maxPrizeIndex < 0) return 0;
+
+    const segmentCenterAngle = maxPrizeIndex * segmentAngle + segmentAngle / 2;
+    const targetAngle = segmentCenterAngle - angleOffset;
+    return 360 * ANIMATION_CONFIG.spin.rotations - targetAngle;
+  }, [maxPrizeIndex, segmentAngle, angleOffset]);
+
+  // Sử dụng spinDuration từ prop (đã tính trong useSpinGame), fallback nếu không có
+  const actualDuration =
+    spinDuration ||
+    (typeof ANIMATION_CONFIG.spin.duration === "function"
       ? ANIMATION_CONFIG.spin.duration()
-      : ANIMATION_CONFIG.spin.duration;
+      : ANIMATION_CONFIG.spin.duration);
 
   return (
     <div
@@ -52,10 +59,14 @@ export const LuckyWheel = ({
           width: radius * 2,
           height: radius * 2,
           transformStyle: "preserve-3d",
+          // Khi đã dừng: fix vị trí bằng style.rotate để KHÔNG re-animate
+          rotate:
+            maxPrizeTier && !isSpinning ? `${finalRotation}deg` : undefined,
         }}
-        animate={{ rotate: totalRotation }}
+        initial={{ rotate: 0 }}
+        animate={isSpinning ? { rotate: finalRotation } : {}}
         transition={{
-          duration: isSpinning ? spinDuration : 0,
+          duration: actualDuration,
           ease: ANIMATION_CONFIG.spin.easing,
         }}
       >
@@ -66,7 +77,7 @@ export const LuckyWheel = ({
           className="drop-shadow-2xl"
         >
           {displayPrizes.map((prize, index) => {
-            // Tam giác mốc ở bên phải (0°), nên segment bắt đầu từ 0° thay vì -90°
+            // Tam giác mốc ở bên phải (0°), segment index 0 bắt đầu từ 0°
             const startAngle = index * segmentAngle * (Math.PI / 180);
             const endAngle = (index + 1) * segmentAngle * (Math.PI / 180);
             const x1 = radius + radius * Math.cos(startAngle);
