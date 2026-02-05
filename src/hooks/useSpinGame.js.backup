@@ -1,0 +1,219 @@
+import { ANIMATION_CONFIG, GAME_STATE, USER_STATE } from "../utils/constants";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+/**
+ * Hook quản lý game Lucky Spin - REDESIGN
+ * Flow mới:
+ * 1. Click "Bắt đầu" → Auto chọn 4 user ngẫu nhiên (animation lần lượt)
+ * 2. Sau khi đủ 4 user → Hiển thị nút "Quay vòng quay"
+ * 3. Mỗi lần quay → Quay 1 vòng → Random 1 trong 4 user → Highlight
+ * 4. Có thể quay nhiều lần (nút "Quay lại")
+ * 5. Chỉ trừ tồn kho SAU KHI animation xong
+ */
+export const useSpinGame = (users, prizes) => {
+  const [gameState, setGameState] = useState(GAME_STATE.IDLE);
+  const [selectedUsers, setSelectedUsers] = useState([]); // 4 user đã chọn
+  const [currentWinner, setCurrentWinner] = useState(null); // User trúng lần quay hiện tại
+  const [spinHistory, setSpinHistory] = useState([]); // Lịch sử các lần quay
+  const [availablePrizes, setAvailablePrizes] = useState(prizes);
+  const [isAnimating, setIsAnimating] = useState(false);
+  
+  const timeoutRefs = useRef([]);
+
+  const clearAllTimeouts = useCallback(() => {
+    timeoutRefs.current.forEach((timeout) => clearTimeout(timeout));
+    timeoutRefs.current = [];
+  }, []);
+
+  const startGame = useCallback(() => {
+    if (gameState !== GAME_STATE.IDLE) return;
+    setGameState(GAME_STATE.PICKING);
+  }, [gameState]);
+
+  const startShuffling = useCallback(() => {
+    setIsShuffling(true);
+    setGameState(GAME_STATE.SHUFFLING);
+
+    const timeout = setTimeout(() => {
+      setIsShuffling(false);
+    }, ANIMATION_CONFIG.shuffle.duration * 1000);
+
+    timeoutRefs.current.push(timeout);
+  }, []);
+
+  const pickUserForEnvelope = useCallback(
+    (envelopeIndex) => {
+      if (gameState !== GAME_STATE.PICKING) return;
+      if (envelopes[envelopeIndex] !== null) return;
+
+      const selectedUserIds = envelopes
+        .filter((u) => u !== null)
+        .map((u) => u.id);
+      const availableUsers = users.filter(
+        (u) => !selectedUserIds.includes(u.id),
+      );
+
+      if (availableUsers.length === 0) return;
+
+      const randomUser =
+        availableUsers[Math.floor(Math.random() * availableUsers.length)];
+
+      const newEnvelopes = [...envelopes];
+      newEnvelopes[envelopeIndex] = randomUser;
+      setEnvelopes(newEnvelopes);
+
+      setUserStates((prev) => ({
+        ...prev,
+        [randomUser.id]: USER_STATE.SELECTED,
+      }));
+
+      if (newEnvelopes.every((e) => e !== null)) {
+        setTimeout(() => {
+          startShuffling();
+        }, 500);
+      }
+    },
+    [gameState, envelopes, users, startShuffling],
+  );
+
+  const startSpinning = useCallback(() => {
+    if (gameState !== GAME_STATE.SHUFFLING) return;
+
+    setGameState(GAME_STATE.SPINNING);
+    setCurrentSpinIndex(0);
+
+    if (spinNextRoundRef.current) {
+      spinNextRoundRef.current(0);
+    }
+  }, [gameState]);
+
+  const spinNextRound = useCallback(
+    (roundIndex) => {
+      if (roundIndex >= 4) {
+        setGameState(GAME_STATE.REVEALING);
+        return;
+      }
+
+      setCurrentSpinIndex(roundIndex);
+
+      const availableList = availablePrizes.filter((p) => p.quantity > 0);
+      if (availableList.length === 0) return;
+
+      const randomPrize =
+        availableList[Math.floor(Math.random() * availableList.length)];
+      const prizeIndex = prizes.findIndex((p) => p.id === randomPrize.id);
+
+      // Set result immediately for wheel to start spinning
+      const result = {
+        user: envelopes[roundIndex],
+        prize: randomPrize,
+        prizeIndex,
+        roundIndex,
+      };
+
+      setSpinResults((prev) => {
+        const newResults = [...prev];
+        newResults[roundIndex] = result;
+        return newResults;
+      });
+
+      // Store pending update - will be applied AFTER wheel animation completes
+      setPendingPrizeUpdate({
+        prizeId: randomPrize.id,
+        userId: result.user.id,
+        roundIndex,
+      });
+
+      // NOTE: Prize quantity update moved to handleSpinComplete callback
+      // This ensures animation plays BEFORE user sees quantity change
+    },
+    [envelopes, availablePrizes, prizes],
+  );
+
+  // Callback for when wheel animation completes
+  const handleSpinComplete = useCallback(
+    (result) => {
+      if (!pendingPrizeUpdate) return;
+
+      // NOW update the prize quantity after animation finished
+      setAvailablePrizes((prev) =>
+        prev.map((p) =>
+          p.id === pendingPrizeUpdate.prizeId
+            ? { ...p, quantity: p.quantity - 1 }
+            : p,
+        ),
+      );
+
+      setUserStates((prev) => ({
+        ...prev,
+        [pendingPrizeUpdate.userId]: USER_STATE.WINNER,
+      }));
+
+      setPendingPrizeUpdate(null);
+
+      // Move to next round after a delay
+      setTimeout(() => {
+        if (spinNextRoundRef.current) {
+          spinNextRoundRef.current(pendingPrizeUpdate.roundIndex + 1);
+        }
+      }, 800);
+    },
+    [pendingPrizeUpdate],
+  );
+
+  useEffect(() => {
+    spinNextRoundRef.current = spinNextRound;
+  }, [spinNextRound]);
+
+  const revealResults = useCallback(() => {
+    const timeout = setTimeout(() => {
+      setGameState(GAME_STATE.COMPLETED);
+    }, 3000);
+
+    timeoutRefs.current.push(timeout);
+  }, []);
+
+  const resetGame = useCallback(() => {
+    clearAllTimeouts();
+    setGameState(GAME_STATE.IDLE);
+    setEnvelopes([null, null, null, null]);
+    setIsShuffling(false);
+    setCurrentSpinIndex(-1);
+    setSpinResults([null, null, null, null]);
+    setUserStates({});
+    setAvailablePrizes(prizes);
+  }, [prizes, clearAllTimeouts]);
+
+  useEffect(() => {
+    if (
+      gameState === GAME_STATE.REVEALING &&
+      spinResults.every((r) => r !== null)
+    ) {
+      revealResults();
+    }
+  }, [gameState, spinResults, revealResults]);
+
+  return {
+    gameState,
+    envelopes,
+    isShuffling,
+    currentSpinIndex,
+    spinResults,
+    userStates,
+    availablePrizes,
+
+    startGame,
+    pickUserForEnvelope,
+    startSpinning,
+    resetGame,
+    handleSpinComplete, // NEW: Callback for wheel animation complete
+
+    canStart: gameState === GAME_STATE.IDLE,
+    canPickEnvelope: gameState === GAME_STATE.PICKING,
+    canSpin: gameState === GAME_STATE.SHUFFLING && !isShuffling,
+    isSpinning: gameState === GAME_STATE.SPINNING,
+    isRevealing: gameState === GAME_STATE.REVEALING,
+    isCompleted: gameState === GAME_STATE.COMPLETED,
+    filledCount: envelopes.filter((e) => e !== null).length,
+  };
+};

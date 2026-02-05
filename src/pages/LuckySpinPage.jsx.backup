@@ -1,0 +1,440 @@
+import { COLORS, GAME_STATE } from "../utils/constants";
+import {
+  CloudPattern,
+  CornerDecorations,
+  FallingPetals,
+} from "../components/TetDecorations";
+import { RefreshCw, RotateCw, Trophy } from "lucide-react";
+
+import { FallingEnvelopes } from "../components/FallingEnvelopes";
+import { LuckySpinArena } from "../components/LuckySpinArena";
+import { PrizeList } from "../components/PrizeList";
+import { SAMPLE_USERS } from "../utils/mockData";
+import { SelectedUsersList } from "../components/SelectedUsersList";
+import { UserList } from "../components/UserList";
+import { motion } from "framer-motion";
+import { usePrizes } from "../contexts/PrizeContext";
+import { useSpinGame } from "../hooks/useSpinGame";
+
+/**
+ * Trang Lucky Spin - Sự Kiện Tết Việt Nam
+ * Layout 3 cột: User List | Arena (Wheel + 4 Envelopes) | Prize List
+ * Flow mới: Auto pick 4 users → Spin nhiều lần → Mỗi lần random 1 winner
+ */
+export const LuckySpinPage = () => {
+  const { prizes } = usePrizes();
+
+  const {
+    gameState,
+    selectedUsers,
+    currentWinner,
+    spinHistory,
+    availablePrizes,
+    isAnimating,
+    highlightedUserId,
+    highlightedEnvelopeIndex,
+    startGame,
+    spinWheel,
+    resetGame,
+    canPickUser,
+    canSpin,
+    isSpinning,
+    hasWinner,
+    pickedCount,
+    needMoreUsers,
+  } = useSpinGame(SAMPLE_USERS, prizes);
+
+  return (
+    <div className="min-h-screen w-full relative overflow-hidden bg-[#F5E6D3]">
+      {/* Decorative Elements */}
+      <CloudPattern />
+      <CornerDecorations />
+      <FallingPetals />
+
+      {/* Animation bong bóng bao lì xì rơi khi có winner */}
+      <FallingEnvelopes trigger={hasWinner} />
+
+      {/* Background Pattern - Improved */}
+      <div
+        className="fixed inset-0 opacity-5"
+        style={{
+          backgroundImage: `
+            radial-gradient(circle at 20% 50%, ${COLORS.primary.gold}40 1px, transparent 1px),
+            radial-gradient(circle at 80% 50%, ${COLORS.primary.red}40 1px, transparent 1px)
+          `,
+          backgroundSize: "50px 50px, 60px 60px",
+          backgroundPosition: "0 0, 25px 25px",
+        }}
+      />
+
+      {/* Main Content - 3 Column Layout */}
+      <div className="relative z-10 min-h-screen flex flex-col">
+        {/* Header */}
+        <motion.div
+          className="text-center py-6"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <h1
+            className="text-6xl font-black tracking-wider"
+            style={{
+              color: COLORS.primary.red,
+              textShadow: `
+                0 0 20px ${COLORS.primary.gold}80,
+                3px 3px 6px rgba(0,0,0,0.3)
+              `,
+            }}
+          >
+            VÒNG QUAY MAY MẮN
+          </h1>
+          <p className="text-lg mt-2 text-gray-600">
+            👉 Click "Quay vòng quay" to spin the lucky wheel 🎉 Congratulations to {currentWinner ? currentWinner.name : "Võ H"}! 🎉
+          </p>
+        </motion.div>
+
+        {/* Main 3-Column Grid */}
+        <div className="flex-1 grid grid-cols-12 gap-6 px-8 pb-8">
+          {/* LEFT: Selected Users */}
+          <div className="col-span-3 flex flex-col">
+            <motion.div
+              className="rounded-2xl p-6 h-full"
+              style={{
+                background: `linear-gradient(135deg, ${COLORS.primary.red}20 0%, ${COLORS.primary.darkRed}20 100%)`,
+                border: `2px solid ${COLORS.primary.red}40`,
+              }}
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+            >
+              <h3
+                className="text-2xl font-bold mb-6 text-center"
+                style={{ color: COLORS.primary.red }}
+              >
+                SELECTED USERS
+              </h3>
+              
+              <div className="space-y-4">
+                {[0, 1, 2, 3].map((index) => {
+                  const user = selectedUsers[index];
+                  return (
+                    <motion.div
+                      key={index}
+                      className="rounded-xl p-4"
+                      style={{
+                        background: user
+                          ? `linear-gradient(135deg, ${COLORS.primary.red} 0%, ${COLORS.primary.darkRed} 100%)`
+                          : `linear-gradient(135deg, ${COLORS.neutral.gray}40 0%, ${COLORS.neutral.dark}40 100%)`,
+                        border: `2px solid ${user ? COLORS.primary.gold : COLORS.neutral.gray}60`,
+                      }}
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-10 h-10 rounded-full flex items-center justify-center font-black text-lg"
+                          style={{
+                            background: user ? COLORS.primary.gold : COLORS.neutral.gray,
+                            color: COLORS.neutral.dark,
+                          }}
+                        >
+                          {index + 1}
+                        </div>
+                        <div className="flex-1">
+                          {user ? (
+                            <>
+                              <p className="font-bold text-white">{user.name}</p>
+                              <p className="text-xs text-gray-300">{user.department}</p>
+                            </>
+                          ) : (
+                            <p className="text-gray-500 italic">Chưa chọn</p>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* Pick Users Button */}
+              {selectedUsers.length < 4 && (
+                <motion.button
+                  onClick={startGame}
+                  disabled={!canPickUser || isAnimating}
+                  className="w-full mt-6 py-4 rounded-xl font-black text-lg"
+                  style={{
+                    background: canPickUser && !isAnimating
+                      ? `linear-gradient(135deg, ${COLORS.primary.gold} 0%, #DAA520 100%)`
+                      : COLORS.neutral.gray,
+                    color: COLORS.neutral.dark,
+                    boxShadow: canPickUser && !isAnimating
+                      ? `0 0 20px ${COLORS.primary.gold}60`
+                      : "none",
+                  }}
+                  whileHover={canPickUser && !isAnimating ? { scale: 1.05 } : {}}
+                  whileTap={canPickUser && !isAnimating ? { scale: 0.95 } : {}}
+                >
+                  {isAnimating ? "Đang chọn..." : `Chọn người ${selectedUsers.length + 1}`}
+                </motion.button>
+              )}
+            </motion.div>
+          </div>
+
+          {/* CENTER: Lucky Wheel + Buttons */}
+          <div className="col-span-6 flex flex-col items-center justify-center">
+            <LuckySpinArena
+              gameState={gameState}
+              selectedUsers={selectedUsers}
+              currentWinner={currentWinner}
+              prizes={prizes}
+              isSpinning={isSpinning}
+              onEnvelopeClick={startGame}
+              canPickUser={canPickUser}
+              canSpin={canSpin}
+              onSpinClick={spinWheel}
+              highlightedEnvelopeIndex={highlightedEnvelopeIndex}
+            />
+
+            {/* Buttons Below Wheel */}
+            <div className="flex items-center gap-6 mt-8">
+              {/* Quay vòng quay Button */}
+              <motion.button
+                onClick={spinWheel}
+                disabled={!canSpin}
+                className="px-12 py-5 rounded-full font-black text-2xl flex items-center gap-3"
+                style={{
+                  background: canSpin
+                    ? `linear-gradient(135deg, ${COLORS.primary.gold} 0%, #DAA520 100%)`
+                    : COLORS.neutral.gray,
+                  color: COLORS.neutral.dark,
+                  border: `4px solid ${canSpin ? COLORS.neutral.white : COLORS.neutral.gray}`,
+                  boxShadow: canSpin
+                    ? `0 0 40px ${COLORS.primary.gold}90, 0 10px 30px rgba(0,0,0,0.5)`
+                    : "none",
+                }}
+                whileHover={canSpin ? { scale: 1.1 } : {}}
+                whileTap={canSpin ? { scale: 0.95 } : {}}
+                initial={{ scale: 0 }}
+                animate={{ scale: canSpin ? 1 : 0 }}
+              >
+                <RotateCw className={`w-8 h-8 ${isSpinning ? "animate-spin" : ""}`} />
+                Quay vòng quay
+              </motion.button>
+
+              {/* Chơi lại Button */}
+              {hasWinner && (
+                <motion.button
+                  onClick={resetGame}
+                  className="px-10 py-4 rounded-full font-bold text-xl flex items-center gap-3"
+                  style={{
+                    background: `linear-gradient(135deg, ${COLORS.primary.red} 0%, ${COLORS.primary.darkRed} 100%)`,
+                    color: COLORS.neutral.white,
+                    border: `3px solid ${COLORS.primary.gold}`,
+                    boxShadow: `0 0 30px ${COLORS.primary.red}60`,
+                  }}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                >
+                  <RefreshCw className="w-6 h-6" />
+                  Chơi lại
+                </motion.button>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT: Prize List */}
+          <div className="col-span-3">
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+            >
+              <PrizeList prizes={availablePrizes} spinHistory={spinHistory} />
+            </motion.div>
+          </div>
+        </div>
+      </div>
+                style={{ color: COLORS.primary.gold }}
+              >
+                {needMoreUsers
+                  ? `Đã chọn ${pickedCount}/4 người`
+                  : canSpin
+                    ? "Sẵn sàng quay!"
+                    : isSpinning
+                      ? "Đang quay..."
+                      : hasWinner
+                        ? "Đã có người trúng!"
+                        : "Chờ bắt đầu..."}
+              </p>
+            </div>
+
+            {/* Reset Button */}
+            {selectedUsers.length > 0 && (
+              <button
+                onClick={resetGame}
+                className="px-6 py-4 rounded-xl font-semibold
+                         bg-slate-700 hover:bg-slate-600
+                         flex items-center gap-2
+                         transition-all duration-300"
+                style={{
+                  border: `2px solid ${COLORS.neutral.lightGray}`,
+                  color: COLORS.neutral.white,
+                }}
+              >
+                <RefreshCw className="w-5 h-5" />
+                Chơi Lại
+              </button>
+            )}
+          </motion.div>
+        </div>
+
+        {/* Layout: User List (left) | Arena (center) | Prize List (right) */}
+        <div className="grid grid-cols-12 gap-6">
+          {/* Cột Trái: Full User List với animation highlight */}
+          <motion.div
+            className="col-span-12 lg:col-span-3"
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <div
+              className="rounded-xl p-6 h-full"
+              style={{
+                background: `${COLORS.neutral.gray}80`,
+                backdropFilter: "blur(10px)",
+                border: `1px solid ${COLORS.primary.gold}40`,
+              }}
+            >
+              <UserList
+                users={SAMPLE_USERS}
+                selectedUsers={selectedUsers}
+                currentWinner={currentWinner}
+                highlightedUserId={highlightedUserId}
+              />
+            </div>
+          </motion.div>
+
+          {/* Cột Giữa: Lucky Spin Arena */}
+          <motion.div
+            className="w-full lg:col-span-6"
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <div
+              className="rounded-xl p-8 h-full"
+              style={{
+                background: `${COLORS.neutral.gray}80`,
+                backdropFilter: "blur(10px)",
+                border: `1px solid ${COLORS.primary.gold}40`,
+                boxShadow: `0 0 50px ${COLORS.effect.shadow}`,
+              }}
+            >
+              <LuckySpinArena
+                gameState={gameState}
+                selectedUsers={selectedUsers}
+                currentWinner={currentWinner}
+                prizes={availablePrizes}
+                isSpinning={isSpinning}
+                onEnvelopeClick={startGame}
+                canPickUser={canPickUser}
+                canSpin={canSpin}
+                onSpinClick={spinWheel}
+                highlightedEnvelopeIndex={highlightedEnvelopeIndex}
+              />
+            </div>
+          </motion.div>
+
+          {/* Cột Phải: Danh sách Giải thưởng */}
+          <motion.div
+            className="w-1/5 lg:col-span-3"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <div
+              className="rounded-xl p-6 h-full"
+              style={{
+                background: `${COLORS.neutral.gray}80`,
+                backdropFilter: "blur(10px)",
+                border: `1px solid ${COLORS.neutral.lightGray}40`,
+              }}
+            >
+              <PrizeList prizes={availablePrizes} spinHistory={spinHistory} />
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Winner Announcement - hiện khi có người trúng giải */}
+        {hasWinner && currentWinner && (
+          <motion.div
+            className="fixed inset-0 flex items-center justify-center z-50"
+            style={{ background: "rgba(0,0,0,0.8)" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <motion.div
+              className="text-center p-12 rounded-2xl"
+              style={{
+                background: `linear-gradient(135deg, ${COLORS.primary.red} 0%, ${COLORS.primary.darkRed} 100%)`,
+                border: `3px solid ${COLORS.primary.gold}`,
+                boxShadow: `0 0 100px ${COLORS.effect.glow}`,
+              }}
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", duration: 0.8 }}
+            >
+              <Trophy className="w-24 h-24 mx-auto mb-6 text-yellow-400" />
+              <h2
+                className="text-5xl font-bold mb-4"
+                style={{ color: COLORS.primary.gold }}
+              >
+                CHÚC MỪNG!
+              </h2>
+              <p className="text-3xl text-white font-bold mb-4">
+                {currentWinner.name}
+              </p>
+              <p className="text-xl text-yellow-400 mb-6">
+                {spinHistory.length > 0 &&
+                spinHistory[spinHistory.length - 1].prize
+                  ? `Trúng giải: ${spinHistory[spinHistory.length - 1].prize.name}`
+                  : "Đã trúng giải thưởng!"}
+              </p>
+
+              <div className="flex gap-4 justify-center">
+                {/* Quay lại để pick winner khác */}
+                {selectedUsers.length === 4 && (
+                  <button
+                    onClick={() => {
+                      /* Close popup, ready for next spin */
+                      spinWheel();
+                    }}
+                    className="px-8 py-4 rounded-xl font-bold text-lg
+                             bg-blue-500 hover:bg-blue-400
+                             text-white
+                             transition-all duration-300
+                             hover:scale-110"
+                  >
+                    🎰 Quay Lại
+                  </button>
+                )}
+
+                {/* Reset game */}
+                <button
+                  onClick={resetGame}
+                  className="px-8 py-4 rounded-xl font-bold text-lg
+                           bg-yellow-500 hover:bg-yellow-400
+                           text-slate-900
+                           transition-all duration-300
+                           hover:scale-110"
+                >
+                  🔄 Chơi Lượt Mới
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </div>
+    </div>
+  );
+};
