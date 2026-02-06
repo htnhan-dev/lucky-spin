@@ -1,32 +1,36 @@
+import { COLORS, TET_BLESSINGS } from "../utils/constants";
 import {
+  Calendar,
+  Download,
+  History,
   RefreshCw,
   RotateCw,
-  History,
-  Download,
-  Calendar,
   Trophy,
+  Upload,
 } from "lucide-react";
-import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
+import { useCallback, useEffect, useState } from "react";
 
-import { COLORS } from "../utils/constants";
+import { BlessingCouplet } from "../components/BlessingCouplet";
+import { Button } from "../components/ui/button";
 import { FallingEnvelopes } from "../components/FallingEnvelopes";
 import { LuckyWheel } from "../components/LuckyWheel";
 import { PrizeList } from "../components/PrizeList";
 import { RedEnvelope } from "../components/RedEnvelope";
 import { SAMPLE_USERS } from "../utils/mockData";
-import { UserList } from "../components/UserList";
 import { UserImportModal } from "../components/UserImportModal";
+import { UserList } from "../components/UserList";
+import bgColumn from "../assets/bg-column.png";
+import bgImage from "../assets/lucky-spin-bg.jpg";
 import { motion } from "framer-motion";
 import { usePrizes } from "../contexts/PrizeContext";
 import { useSpinGame } from "../hooks/useSpinGame";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "../components/ui/dialog";
-import { Button } from "../components/ui/button";
 
 /**
  * Lucky Spin - Modern Clean Layout
@@ -36,9 +40,28 @@ export const LuckySpinPage = () => {
   const { prizes, updatePrizeQuantity, resetPrizes } = usePrizes();
   const [users, setUsers] = useState(SAMPLE_USERS);
   const [showHistory, setShowHistory] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [blessingModal, setBlessingModal] = useState({
+    show: false,
+    message: "",
+    userName: "",
+    prizeName: "",
+  });
+
+  // Auto-hide blessing couplet sau 2 giây
+  useEffect(() => {
+    if (blessingModal.show) {
+      const timer = setTimeout(() => {
+        setBlessingModal((prev) => ({ ...prev, show: false }));
+      }, 1250); // 2 giây
+
+      return () => clearTimeout(timer);
+    }
+  }, [blessingModal.show]);
 
   const handleImportUsers = (importedUsers) => {
     setUsers(importedUsers);
+    setShowImportModal(false);
   };
 
   const handleResetAll = () => {
@@ -46,6 +69,8 @@ export const LuckySpinPage = () => {
       resetPrizes(); // Reset prizes về mặc định
       resetGame(); // Reset game state
       window.location.reload(); // Reload để apply changes
+      // xóa localStorage
+      localStorage.clear();
     }
   };
 
@@ -77,8 +102,45 @@ export const LuckySpinPage = () => {
     allEnvelopesRevealed,
   } = useSpinGame(users, prizes, updatePrizeQuantity);
 
+  // Wrapper function to show blessing modal when revealing envelope
+  const handleRevealEnvelope = useCallback(
+    (index) => {
+      const allocation = userPrizes[index];
+      if (allocation) {
+        // Get random blessing message - safe in event handler
+        const randomIndex = Math.floor(Math.random() * TET_BLESSINGS.length);
+        const randomBlessing = TET_BLESSINGS[randomIndex];
+
+        // Show blessing modal
+        setBlessingModal({
+          show: true,
+          message: randomBlessing,
+          userName: allocation.user.name,
+          prizeName:
+            allocation.prize.displayValue ||
+            allocation.prize.description ||
+            allocation.prize.name,
+        });
+
+        // Call original reveal function
+        revealEnvelope(index);
+      }
+    },
+    [userPrizes, revealEnvelope],
+  );
+
   return (
-    <div className="min-h-screen w-full relative overflow-hidden bg-linear-to-br from-slate-50 via-orange-50 to-red-50">
+    //from-slate-50 via-orange-50 to-red-50 - bg old
+    <div
+      className="min-h-screen w-full relative overflow-hidden"
+      style={{
+        backgroundImage: `url(${bgImage})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        backgroundAttachment: "fixed",
+      }}
+    >
       {/* Celebration Animation - Trigger khi vòng quay xong (PRIZES_ALLOCATED) */}
       <FallingEnvelopes trigger={canRevealEnvelopes} />
 
@@ -254,20 +316,31 @@ export const LuckySpinPage = () => {
         {/* 3-Column Grid Layout - Fixed width with padding for banners */}
         <div className="flex-1 px-6 pb-8 m-auto flex items-center justify-center">
           <div className="grid grid-cols-12 gap-6 h-full max-w-7xl">
-            {/* LEFT: User List - Scrollable */}
+            {/* LEFT: User List - Scrollable với bg-column */}
             <div className="col-span-3">
               <motion.div
-                className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl h-full overflow-hidden border border-gray-200"
+                className="rounded-2xl h-full overflow-hidden relative"
                 initial={{ opacity: 0, x: -30 }}
                 animate={{ opacity: 1, x: 0 }}
+                style={{
+                  backgroundImage: `url(${bgColumn})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  backgroundRepeat: "no-repeat",
+                }}
               >
-                <UserList
-                  users={users}
-                  selectedUsers={selectedUsers}
-                  highlightedUserId={highlightedUserId}
-                  onRemoveSelectedUser={removeSelectedUser}
-                  onImportUsers={handleImportUsers}
-                />
+                {/* Overlay để làm mờ background một chút */}
+                {/* <div className="absolute inset-0 bg-white/20 backdrop-blur-[0.5px]" /> */}
+
+                {/* Content */}
+                <div className="relative z-10 h-full">
+                  <UserList
+                    users={users}
+                    selectedUsers={selectedUsers}
+                    highlightedUserId={highlightedUserId}
+                    onRemoveSelectedUser={removeSelectedUser}
+                  />
+                </div>
               </motion.div>
             </div>
 
@@ -314,7 +387,7 @@ export const LuckySpinPage = () => {
                       prize={allocation?.prize || null}
                       isSelected={!!selectedUsers[index]}
                       onClick={startGame}
-                      onReveal={() => revealEnvelope(index)}
+                      onReveal={() => handleRevealEnvelope(index)}
                       onRemove={
                         selectedUsers[index]
                           ? () => removeSelectedUser(selectedUsers[index].id)
@@ -362,14 +435,29 @@ export const LuckySpinPage = () => {
               </div>
             </div>
 
-            {/* RIGHT: Prize List */}
+            {/* RIGHT: Prize List với bg-column */}
             <div className="col-span-3">
               <motion.div
-                className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl h-full border border-gray-200"
+                className="rounded-2xl  h-full overflow-hidden relative"
                 initial={{ opacity: 0, x: 30 }}
                 animate={{ opacity: 1, x: 0 }}
+                style={{
+                  backgroundImage: `url(${bgColumn})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  backgroundRepeat: "no-repeat",
+                }}
               >
-                <PrizeList prizes={availablePrizes} spinHistory={spinHistory} />
+                {/* Overlay để làm mờ background một chút */}
+                {/* <div className="absolute inset-0 bg-white/20 backdrop-blur-[0.5px]" /> */}
+
+                {/* Content */}
+                <div className="relative z-10 h-full">
+                  <PrizeList
+                    prizes={availablePrizes}
+                    spinHistory={spinHistory}
+                  />
+                </div>
               </motion.div>
             </div>
           </div>
@@ -378,26 +466,49 @@ export const LuckySpinPage = () => {
 
       {/* Buttons - Fixed góc phải dưới màn hình */}
       <div className="fixed bottom-6 right-6 z-30 flex flex-col gap-3">
-        {/* Xem lịch sử - Nổi bật */}
+        {/* Nhập danh sách - Gradient tím */}
+        <Button
+          onClick={() => setShowImportModal(true)}
+          className="px-6 py-6 font-bold shadow-xl hover:shadow-purple-500/50 transition-all duration-300 hover:scale-110 text-white"
+          style={{
+            background: `linear-gradient(135deg, #9333EA 0%, #C026D3 100%)`,
+          }}
+        >
+          <Upload className="w-5 h-5 mr-2" />
+          Nhập danh sách
+        </Button>
+
+        {/* Xem lịch sử - Gradient xanh dương */}
         <Button
           onClick={() => setShowHistory(true)}
-          variant="outline"
-          className="px-6 py-6 font-bold shadow-xl hover:shadow-blue-500/50 border-2 border-blue-500 text-blue-600 hover:bg-blue-50 hover:border-blue-600 transition-all duration-300 hover:scale-110"
+          className="px-6 py-6 font-bold shadow-xl hover:shadow-blue-500/50 transition-all duration-300 hover:scale-110 text-white"
+          style={{
+            background: `linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)`,
+          }}
         >
           <History className="w-5 h-5 mr-2" />
           Lịch sử ({spinHistory.length})
         </Button>
 
-        {/* Reset All - Nổi bật */}
+        {/* Reset All - Gradient đỏ */}
         <Button
           onClick={handleResetAll}
-          variant="destructive"
-          className="px-6 py-6 font-bold shadow-xl hover:shadow-red-500/50 transition-all duration-300 hover:scale-110"
+          className="px-6 py-6 font-bold shadow-xl hover:shadow-red-500/50 transition-all duration-300 hover:scale-110 text-white"
+          style={{
+            background: `linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)`,
+          }}
         >
           <RefreshCw className="w-5 h-5 mr-2" />
           Reset Tất Cả
         </Button>
       </div>
+
+      {/* Modal Import Users */}
+      <Dialog open={showImportModal} onOpenChange={setShowImportModal}>
+        <DialogContent>
+          <UserImportModal onImportUsers={handleImportUsers} />
+        </DialogContent>
+      </Dialog>
 
       {/* Modal lịch sử - Shadcn Dialog */}
       <Dialog open={showHistory} onOpenChange={setShowHistory}>
@@ -513,6 +624,14 @@ export const LuckySpinPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Blessing Couplet - Hiển thị lời chúc Tết khi mở bao lì xì */}
+      <BlessingCouplet
+        isVisible={blessingModal.show}
+        message={blessingModal.message}
+        userName={blessingModal.userName}
+        prizeName={blessingModal.prizeName}
+      />
 
       {/* REMOVED: Winner Modal - Không cần nữa vì paper scroll đã hiển thị giải */}
     </div>

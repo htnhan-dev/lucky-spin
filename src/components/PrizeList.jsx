@@ -10,21 +10,21 @@ export const PrizeList = ({ prizes, spinHistory }) => {
   };
 
   return (
-    <div className="h-full flex flex-col p-6">
-      <div className="mb-6">
-        <h2
-          className="text-2xl font-black mb-2 text-center"
-          style={{ color: COLORS.primary.red }}
-        >
+    <div className="h-full flex flex-col p-7!">
+      <div className="mt-14!">
+        <h2 className="text-xl font-black mb-2 text-center text-white">
           Giải thưởng
         </h2>
-        <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+        {/* <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
           <LucideIcons.Trophy className="w-4 h-4" />
           <span>{prizes.length} giải thưởng</span>
-        </div>
+        </div> */}
       </div>
 
-      <div className="flex-1 mt-3! p-2! space-y-3 overflow-y-auto custom-scrollbar">
+      <div
+        className="flex-1 mt-3! p-2! space-y-3 overflow-y-auto custom-scrollbar"
+        style={{ maxHeight: "calc(100vh - 310px)" }}
+      >
         {prizes.map((prize, index) => {
           const Icon = getIcon(prize.icon);
           return (
@@ -56,14 +56,14 @@ export const PrizeList = ({ prizes, spinHistory }) => {
                   className="font-bold text-sm truncate"
                   style={{ color: COLORS.primary.darkRed }}
                 >
-                  {prize.name}
+                  {prize.description}
                 </p>
-                <p
+                {/* <p
                   className="font-bold text-sm truncate"
                   style={{ color: COLORS.neutral.gray }}
                 >
                   {prize.description}
-                </p>
+                </p> */}
                 <p className="text-xs text-gray-500">
                   Còn {prize.quantity} giải
                 </p>

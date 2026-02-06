@@ -1,9 +1,9 @@
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
 import { COLORS } from "../utils/constants";
-import confetti from "canvas-confetti";
-import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import confetti from "canvas-confetti";
 
 export const RedEnvelope = ({
   index,
@@ -173,16 +173,16 @@ export const RedEnvelope = ({
                   {user.name}
                 </div>
 
-                {/* Hiển thị tên giải khi đã mở */}
+                {/* Hiển thị giá trị giải khi đã mở */}
                 {isRevealed && prize && (
                   <motion.div
-                    className="text-[10px] font-black mt-1 leading-tight px-1"
+                    className="text-[10px] font-black mt-1! leading-tight px-1"
                     style={{ color: COLORS.primary.darkRed }}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.3, duration: 0.4 }}
                   >
-                    {prize.name}
+                    {prize.displayValue || prize.description}
                   </motion.div>
                 )}
               </>

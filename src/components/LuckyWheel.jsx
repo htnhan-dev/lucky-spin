@@ -1,8 +1,8 @@
 import { ANIMATION_CONFIG, COLORS } from "../utils/constants";
 import { Award, Gift, Medal, Sparkles, Trophy } from "lucide-react";
-import { useMemo } from "react";
 
 import { motion } from "framer-motion";
+import { useMemo } from "react";
 
 // Map icon names to components
 const ICON_MAP = {
@@ -34,12 +34,16 @@ export const LuckyWheel = ({
 
   // useMemo để KHÓA rotation - chỉ tính 1 lần khi maxPrizeTier thay đổi
   const finalRotation = useMemo(() => {
+    const maxPrizeIndex = maxPrizeTier
+      ? displayPrizes.findIndex((p) => p.tier === maxPrizeTier)
+      : -1;
+
     if (maxPrizeIndex < 0) return 0;
 
     const segmentCenterAngle = maxPrizeIndex * segmentAngle + segmentAngle / 2;
     const targetAngle = segmentCenterAngle - angleOffset;
     return 360 * ANIMATION_CONFIG.spin.rotations - targetAngle;
-  }, [maxPrizeIndex, segmentAngle, angleOffset]);
+  }, [maxPrizeTier, displayPrizes, segmentAngle, angleOffset]);
 
   // Sử dụng spinDuration từ prop (đã tính trong useSpinGame), fallback nếu không có
   const actualDuration =
@@ -127,13 +131,13 @@ export const LuckyWheel = ({
                         : 1,
                   }}
                 />
-                {/* Prize name text */}
+                {/* Dòng 1: Tên giải (displayName) */}
                 <text
                   x={radius}
-                  y={radius - 40}
+                  y={radius - 45}
                   fill={COLORS.neutral.white}
                   fontSize="12"
-                  fontWeight="bold"
+                  fontWeight="500"
                   textAnchor="middle"
                   dominantBaseline="middle"
                   transform={`rotate(${index * segmentAngle + segmentAngle / 2 + 90}, ${radius}, ${radius}) translate(0, ${-radius * 0.55})`}
@@ -144,27 +148,38 @@ export const LuckyWheel = ({
                       : "none",
                   }}
                 >
-                  {prize.name}
+                  {prize.displayName || prize.name}
                 </text>
-                {/* Prize description */}
+                {/* Dòng 2: Giá trị (displayValue) */}
                 <text
                   x={radius}
-                  y={radius - 30}
+                  y={radius - 40}
                   fill={COLORS.neutral.white}
-                  fontSize="9"
-                  fontWeight="normal"
+                  fontSize="15"
+                  fontWeight="bold"
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  transform={`rotate(${index * segmentAngle + segmentAngle / 2 + 90}, ${radius}, ${radius}) translate(0, ${-radius * 0.35})`}
+                  transform={`rotate(${index * segmentAngle + segmentAngle / 2 + 90}, ${radius}, ${radius}) translate(0, ${-radius * 0.38})`}
                   className="pointer-events-none select-none"
-                  opacity={isMaxPrize ? 1 : 0.9}
                   style={{
                     filter: isMaxPrize
-                      ? `drop-shadow(0 0 3px ${COLORS.primary.gold})`
+                      ? `drop-shadow(0 0 4px ${COLORS.primary.gold})`
                       : "none",
                   }}
                 >
-                  {prize.description}
+                  {prize.displayValue || prize.description}
+                </text>
+                {/* Emoji bao lì xì nhỏ ở dưới */}
+                <text
+                  x={radius}
+                  y={radius - 25}
+                  fontSize="16"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  transform={`rotate(${index * segmentAngle + segmentAngle / 2 + 90}, ${radius}, ${radius}) translate(0, ${-radius * 0.22})`}
+                  className="pointer-events-none select-none"
+                >
+                  {prize.emoji || "🧧"}
                 </text>
                 {/* Highlight overlay cho giải được chọn */}
                 {isMaxPrize && (

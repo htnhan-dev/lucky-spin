@@ -1,7 +1,6 @@
 import { ANIMATION_CONFIG, GAME_STATE } from "../utils/constants";
-import { useCallback, useRef, useState, useEffect } from "react";
-
-import { selectMaxPrizeTier, allocatePrizesForUsers } from "../utils/mockData";
+import { allocatePrizesForUsers, selectMaxPrizeTier } from "../utils/mockData";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const STORAGE_KEY = "spin_reward_history_v1";
 
@@ -71,7 +70,7 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
 
     const totalScrolls =
       Math.floor(Math.random() * (maxScrolls - minScrolls + 1)) + minScrolls;
-    const maxStep = 10; // bước nhảy tối đa
+    const maxStep = 8; // bước nhảy tối đa
 
     let currentIndex = Math.floor(Math.random() * availableUsers.length);
 
