@@ -56,7 +56,21 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
         !selectedUsers.some((su) => su.id === u.id) && // Chưa được pick trong lần quay này
         !winnersSet.has(u.id), // Chưa trúng giải trong lịch sử
     );
-    if (availableUsers.length === 0) return;
+
+    // Nếu không còn user khả dụng (tất cả đã trúng) → Hiển thị cảnh báo
+    if (availableUsers.length === 0) {
+      setGameState(GAME_STATE.IDLE);
+      setIsAnimating(false);
+
+      alert(
+        "⚠️ ĐÃ HẾT NGƯỜI CHƠI!\n\n" +
+          `Tất cả ${users.length} người đã trúng giải.\n\n` +
+          "Vui lòng:\n" +
+          "• Bấm nút 'Reset All' để xóa lịch sử và chơi lại từ đầu\n" +
+          "• Hoặc import thêm danh sách người mới",
+      );
+      return;
+    }
 
     // Chọn user cuối cùng ngay từ đầu
     const finalUser =
@@ -270,12 +284,30 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     ],
   );
 
+  // Reset vòng chơi hiện tại - GIỮ NGUYÊN history
+  const resetRound = useCallback(() => {
+    clearAllTimeouts();
+    setGameState(GAME_STATE.IDLE);
+    setSelectedUsers([]);
+    setCurrentWinner(null);
+    // KHÔNG reset spinHistory - giữ nguyên lịch sử
+    setIsAnimating(false);
+    setHighlightedUserId(null);
+    setHighlightedEnvelopeIndex(null);
+    setMaxPrizeTier(null);
+    setUserPrizes([]);
+    setOpenedEnvelopes([]);
+    setRevealingEnvelope(null);
+    setCurrentSpinDuration(null);
+  }, [clearAllTimeouts]);
+
+  // Reset toàn bộ game - BAO GỒM history
   const resetGame = useCallback(() => {
     clearAllTimeouts();
     setGameState(GAME_STATE.IDLE);
     setSelectedUsers([]);
     setCurrentWinner(null);
-    setSpinHistory([]);
+    setSpinHistory([]); // XÓA history
     setAvailablePrizes(prizes);
     setIsAnimating(false);
     setHighlightedUserId(null);
@@ -304,7 +336,8 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     // Functions
     startGame,
     spinWheel,
-    resetGame,
+    resetRound, // Reset vòng chơi hiện tại (GIỮ history)
+    resetGame, // Reset toàn bộ (XÓA history)
     removeSelectedUser,
     exportHistoryCSV,
     revealEnvelope,

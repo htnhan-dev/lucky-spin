@@ -90,6 +90,7 @@ export const LuckySpinPage = () => {
     currentSpinDuration,
     startGame,
     spinWheel,
+    resetRound,
     resetGame,
     canPickUser,
     canSpin,
@@ -488,7 +489,7 @@ export const LuckySpinPage = () => {
                 {/* Chơi vòng mới - Hiển thị khi mở hết 4 bao lì xì */}
                 {allEnvelopesRevealed && (
                   <Button
-                    onClick={resetGame}
+                    onClick={resetRound}
                     size="lg"
                     variant="outline"
                     className="px-12 py-8 text-xl font-bold border-2 hover:bg-gray-50 transition-all duration-300 hover:scale-105 shadow-lg"
