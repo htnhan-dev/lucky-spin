@@ -55,11 +55,31 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     isProcessingRef.current = true;
 
     // Lấy danh sách users chưa được chọn VÀ chưa trúng giải trong lịch sử
-    const winnersSet = new Set(spinHistory.map((h) => h.user.id));
+    // QUAN TRỌNG: Check cả ID và TÊN để tránh trùng lặp
+    const winnersIdSet = new Set(spinHistory.map((h) => h.user.id));
+    const winnersNameSet = new Set(
+      spinHistory.map((h) => h.user.name.trim().toLowerCase()),
+    );
+
+    console.log("🔍 Debug Pick User:", {
+      totalUsers: users.length,
+      selectedUsersLength: selectedUsers.length,
+      historyLength: spinHistory.length,
+      winnersIds: Array.from(winnersIdSet),
+      winnersNames: Array.from(winnersNameSet),
+    });
+
     const availableUsers = users.filter(
       (u) =>
         !selectedUsers.some((su) => su.id === u.id) && // Chưa được pick trong lần quay này
-        !winnersSet.has(u.id), // Chưa trúng giải trong lịch sử
+        !winnersIdSet.has(u.id) && // Chưa trúng giải trong lịch sử (check ID)
+        !winnersNameSet.has(u.name.trim().toLowerCase()), // Chưa trúng giải trong lịch sử (check TÊN)
+    );
+
+    console.log(
+      "✅ Available users:",
+      availableUsers.length,
+      availableUsers.map((u) => ({ id: u.id, name: u.name })),
     );
 
     // Nếu không còn user khả dụng (tất cả đã trúng) → Hiển thị cảnh báo
