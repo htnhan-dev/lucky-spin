@@ -214,8 +214,16 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
 
     // NGÔI SAO HI VỌNG: Nếu là lượt mới (chưa chọn ai) → Random xem có phát sao không
     if (selectedUsers.length === 0 && luckyStarCount < 6 && !luckyStarUser) {
-      // Chỉ 25% lượt có ngôi sao (random 1-4, nếu bằng 1 thì có sao)
-      const shouldGiveStar = Math.floor(Math.random() * 4) === 0; // 25% chance
+      // Tính số lượt quay = tổng users ÷ 4
+      const totalRounds = Math.ceil(users.length / 4);
+      // Xác suất phát sao = 6 ngôi sao ÷ số lượt quay
+      const starChance = 6 / totalRounds; // VD: 136 người = 34 lượt → 6/34 = ~17.6%
+
+      const shouldGiveStar = Math.random() < starChance;
+      console.log(
+        `⭐ Star chance: ${(starChance * 100).toFixed(1)}% (${totalRounds} rounds for ${users.length} users) → ${shouldGiveStar ? "YES" : "NO"}`,
+      );
+
       if (shouldGiveStar) {
         // Random 1 user trong 4 users sẽ được pick để trúng sao (25% mỗi vị trí)
         const randomPosition = Math.floor(Math.random() * 4); // 0-3
