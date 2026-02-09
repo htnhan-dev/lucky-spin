@@ -25,11 +25,17 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
   const timeoutRefs = useRef([]);
   const pickQueueRef = useRef([]); // Queue để lưu các lần pick đang chờ
   const isProcessingRef = useRef(false); // Flag để biết có đang xử lý không
+  const currentSelectedUsersRef = useRef([]); // Track selected users hiện tại (real-time)
 
   const clearAllTimeouts = useCallback(() => {
     timeoutRefs.current.forEach((t) => clearTimeout(t));
     timeoutRefs.current = [];
   }, []);
+
+  // Sync selectedUsers vào ref
+  useEffect(() => {
+    currentSelectedUsersRef.current = selectedUsers;
+  }, [selectedUsers]);
 
   // Load persisted history on mount
   useEffect(() => {
@@ -47,7 +53,9 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
   // Hàm thực hiện animation pick 1 user
   const processSinglePick = useCallback(() => {
     if (isProcessingRef.current) return; // Đang xử lý rồi
-    if (selectedUsers.length >= 4) {
+
+    // Check với ref để có giá trị real-time
+    if (currentSelectedUsersRef.current.length >= 4) {
       pickQueueRef.current = []; // Clear queue nếu đã đủ
       return;
     }
@@ -63,7 +71,7 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
 
     console.log("🔍 Debug Pick User:", {
       totalUsers: users.length,
-      selectedUsersLength: selectedUsers.length,
+      currentSelectedUsersLength: currentSelectedUsersRef.current.length, // Dùng ref
       historyLength: spinHistory.length,
       winnersIds: Array.from(winnersIdSet),
       winnersNames: Array.from(winnersNameSet),
@@ -71,7 +79,7 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
 
     const availableUsers = users.filter(
       (u) =>
-        !selectedUsers.some((su) => su.id === u.id) && // Chưa được pick trong lần quay này
+        !currentSelectedUsersRef.current.some((su) => su.id === u.id) && // Dùng ref thay vì state
         !winnersIdSet.has(u.id) && // Chưa trúng giải trong lịch sử (check ID)
         !winnersNameSet.has(u.name.trim().toLowerCase()), // Chưa trúng giải trong lịch sử (check TÊN)
     );
@@ -147,6 +155,9 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
 
             const newUsers = [...prev, finalUser];
 
+            // QUAN TRỌNG: Sync ngay vào ref để lần pick tiếp theo biết
+            currentSelectedUsersRef.current = newUsers;
+
             if (newUsers.length === 4) {
               setTimeout(() => setGameState(GAME_STATE.READY_TO_SPIN), 500);
             } else {
@@ -172,7 +183,7 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     }, scrollSpeed);
 
     timeoutRefs.current.push(scrollInterval);
-  }, [users, selectedUsers, spinHistory]);
+  }, [users, spinHistory]);
 
   const startGame = useCallback(() => {
     // Click vào bao lì xì → Thêm vào queue
