@@ -27,7 +27,7 @@ import { SAMPLE_USERS } from "../utils/mockData";
 import { UserImportModal } from "../components/UserImportModal";
 import { UserList } from "../components/UserList";
 import bgColumn from "../assets/bg-column2.png";
-import bgImage from "../assets/bg.png";
+import bgImage from "../assets/bg2.png";
 import { motion } from "framer-motion";
 import { usePrizes } from "../contexts/PrizeContext";
 import { useSpinGame } from "../hooks/useSpinGame";

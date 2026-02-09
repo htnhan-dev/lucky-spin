@@ -10,7 +10,7 @@ export const PrizeList = ({ prizes, spinHistory }) => {
   };
 
   return (
-    <div className="h-full flex flex-col p-5! bg-[#150F3A]!">
+    <div className="h-full flex flex-col p-5!">
       <div className="mt-14!">
         {/* <h2 className="text-xl font-black mb-2 text-center text-white">
           Giải thưởng
