@@ -214,11 +214,16 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
 
     // NGÔI SAO HI VỌNG: Nếu là lượt mới (chưa chọn ai) → Random xem có phát sao không
     if (selectedUsers.length === 0 && luckyStarCount < 6 && !luckyStarUser) {
-      // Random 1 user trong 4 users sẽ được pick để trúng sao (25% mỗi vị trí)
-      const randomPosition = Math.floor(Math.random() * 4); // 0-3
-      console.log(`⭐ Lucky star will be at position ${randomPosition}`);
-      // Lưu vị trí này để sau khi pick đủ 4 users sẽ gán sao
-      sessionStorage.setItem("luckyStarPosition", randomPosition.toString());
+      // Chỉ 25% lượt có ngôi sao (random 1-4, nếu bằng 1 thì có sao)
+      const shouldGiveStar = Math.floor(Math.random() * 4) === 0; // 25% chance
+      if (shouldGiveStar) {
+        // Random 1 user trong 4 users sẽ được pick để trúng sao (25% mỗi vị trí)
+        const randomPosition = Math.floor(Math.random() * 4); // 0-3
+        // Lưu vị trí này để sau khi pick đủ 4 users sẽ gán sao
+        sessionStorage.setItem("luckyStarPosition", randomPosition.toString());
+      } else {
+        sessionStorage.removeItem("luckyStarPosition");
+      }
     }
 
     // Thêm vào queue
