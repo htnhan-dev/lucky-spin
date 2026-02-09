@@ -61,11 +61,11 @@ export const UserList = ({
   };
 
   return (
-    <div className="h-full flex flex-col p-7!">
+    <div className="h-full flex flex-col p-7! pl-12! pt-8!">
       <div className="mt-14!">
-        <h2 className="text-xl font-black mb-2 text-center text-white">
-          Danh Sách Người Chơi
-        </h2>
+        {/* <h2 className="text-xl font-black mb-2 text-center text-white">
+          Bảng vàng
+        </h2> */}
         {/* <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
           <User className="w-4 h-4" />
           <span>{users.length} người tham gia</span>
@@ -75,7 +75,7 @@ export const UserList = ({
       <div
         ref={containerRef}
         className="flex-1 mt-3! p-2! space-y-3 overflow-y-auto custom-scrollbar"
-        style={{ maxHeight: "calc(100vh - 310px)" }}
+        style={{ maxHeight: "calc(100vh - 280px)" }}
       >
         {users.map((user, index) => {
           const isSelected = isUserSelected(user.id);

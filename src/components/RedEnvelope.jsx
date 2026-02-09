@@ -3,7 +3,14 @@ import { useEffect, useState } from "react";
 
 import { COLORS } from "../utils/constants";
 import { X } from "lucide-react";
+import blx1 from "../assets/blx1.png";
+import blx2 from "../assets/blx2.png";
+import blx3 from "../assets/blx3.png";
+import blx4 from "../assets/blx4.png";
 import confetti from "canvas-confetti";
+
+// Mảng background cho 4 bao lì xì
+const envelopeBackgrounds = [blx1, blx2, blx3, blx4];
 
 export const RedEnvelope = ({
   index,
@@ -96,7 +103,13 @@ export const RedEnvelope = ({
             background:
               isRevealed && prize
                 ? `linear-gradient(135deg, ${COLORS.primary.gold} 0%, ${COLORS.primary.lightGold || "#DAA520"} 100%)`
-                : `linear-gradient(135deg, ${COLORS.primary.red} 0%, ${COLORS.primary.darkRed} 100%)`,
+                : undefined,
+            backgroundImage: !isRevealed
+              ? `url(${envelopeBackgrounds[index % 4]})`
+              : undefined,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
             boxShadow: isRevealed
               ? `0 0 40px ${COLORS.primary.gold}A0,
                  inset 0 0 20px rgba(255,255,255,0.2),

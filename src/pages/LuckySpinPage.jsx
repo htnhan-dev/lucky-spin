@@ -26,8 +26,8 @@ import { RedEnvelope } from "../components/RedEnvelope";
 import { SAMPLE_USERS } from "../utils/mockData";
 import { UserImportModal } from "../components/UserImportModal";
 import { UserList } from "../components/UserList";
-import bgColumn from "../assets/bg-column.png";
-import bgImage from "../assets/lucky-spin-bg.jpg";
+import bgColumn from "../assets/bg-column2.png";
+import bgImage from "../assets/bg.png";
 import { motion } from "framer-motion";
 import { usePrizes } from "../contexts/PrizeContext";
 import { useSpinGame } from "../hooks/useSpinGame";
@@ -136,7 +136,7 @@ export const LuckySpinPage = () => {
       style={{
         backgroundImage: `url(${bgImage})`,
         backgroundSize: "cover",
-        backgroundPosition: "center",
+        backgroundPosition: "center -35px",
         backgroundRepeat: "no-repeat",
         backgroundAttachment: "fixed",
       }}
@@ -155,6 +155,63 @@ export const LuckySpinPage = () => {
 
       {/* Main Content */}
       <div className="relative z-10 min-h-screen flex flex-col">
+        {/* TOP LEFT - Khối Sáng Tạo Sản Phẩm */}
+        <motion.div
+          className="fixed left-6 top-6 z-20"
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.8, delay: 0.3 }}
+        >
+          <div
+            className="px-8 py-4 relative overflow-hidden"
+            style={{
+              backgroundColor: "#C81D25",
+              border: "4px solid #FACC15",
+              borderRadius: "20px",
+              boxShadow:
+                "0 10px 30px rgba(0,0,0,0.35), inset 0 0 20px rgba(250, 204, 21, 0.2)",
+            }}
+          >
+            {/* Shimmer effect overlay */}
+            <motion.div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)",
+              }}
+              animate={{
+                x: ["-100%", "200%"],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                repeatDelay: 2,
+                ease: "linear",
+              }}
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.6 }}
+              style={{
+                color: "#FACC15",
+                fontWeight: 900,
+                fontSize: "24px",
+                textShadow:
+                  "2px 2px 0 rgba(0,0,0,0.4), 0 0 10px rgba(250, 204, 21, 0.5)",
+                fontFamily: "'Noto Serif', 'Playfair Display', serif",
+                letterSpacing: "0.05em",
+                position: "relative",
+                zIndex: 1,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Khối Sáng Tạo Sản Phẩm
+            </motion.div>
+          </div>
+        </motion.div>
+
         {/* LEFT BANNER - Vertical Text */}
         <motion.div
           className="fixed left-0 top-1/2 -translate-y-1/2 z-20"
@@ -174,6 +231,14 @@ export const LuckySpinPage = () => {
                 "0 10px 30px rgba(0,0,0,0.35), inset 0 0 20px rgba(250, 204, 21, 0.2)",
             }}
           >
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                boxShadow: "inset 12px 0 20px rgba(250,204,21,0.25)",
+                borderTopRightRadius: "32px",
+                borderBottomRightRadius: "32px",
+              }}
+            />
             {/* Shimmer effect overlay */}
             <motion.div
               className="absolute inset-0 pointer-events-none"
@@ -181,9 +246,7 @@ export const LuckySpinPage = () => {
                 background:
                   "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)",
               }}
-              animate={{
-                x: ["-100%", "200%"],
-              }}
+              animate={{ x: ["-100%", "200%"] }}
               transition={{
                 duration: 3,
                 repeat: Infinity,
@@ -264,7 +327,7 @@ export const LuckySpinPage = () => {
                 style={{
                   color: "#FACC15",
                   fontWeight: 900,
-                  fontSize: "20px",
+                  fontSize: "28px",
                   lineHeight: "1.2",
                   marginBottom: "10px",
                   textShadow:
@@ -282,7 +345,8 @@ export const LuckySpinPage = () => {
         </motion.div>
 
         {/* Header */}
-        <motion.div
+        {/* 
+           <motion.div
           className="text-center pt-2!"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -312,9 +376,10 @@ export const LuckySpinPage = () => {
             )}
           </p>
         </motion.div>
+          */}
 
         {/* 3-Column Grid Layout - Fixed width with padding for banners */}
-        <div className="flex-1 px-6 pb-8 m-auto flex items-center justify-center">
+        <div className="flex-1 px-6 pb-8 pt-22! m-auto flex items-center justify-center">
           <div className="grid grid-cols-12 gap-6 h-full max-w-7xl">
             {/* LEFT: User List - Scrollable với bg-column */}
             <div className="col-span-3">
@@ -441,12 +506,6 @@ export const LuckySpinPage = () => {
                 className="rounded-2xl  h-full overflow-hidden relative"
                 initial={{ opacity: 0, x: 30 }}
                 animate={{ opacity: 1, x: 0 }}
-                style={{
-                  backgroundImage: `url(${bgColumn})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  backgroundRepeat: "no-repeat",
-                }}
               >
                 {/* Overlay để làm mờ background một chút */}
                 {/* <div className="absolute inset-0 bg-white/20 backdrop-blur-[0.5px]" /> */}

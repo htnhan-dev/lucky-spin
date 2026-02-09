@@ -10,11 +10,11 @@ export const PrizeList = ({ prizes, spinHistory }) => {
   };
 
   return (
-    <div className="h-full flex flex-col p-7!">
+    <div className="h-full flex flex-col p-5!">
       <div className="mt-14!">
-        <h2 className="text-xl font-black mb-2 text-center text-white">
+        {/* <h2 className="text-xl font-black mb-2 text-center text-white">
           Giải thưởng
-        </h2>
+        </h2> */}
         {/* <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
           <LucideIcons.Trophy className="w-4 h-4" />
           <span>{prizes.length} giải thưởng</span>
@@ -22,7 +22,7 @@ export const PrizeList = ({ prizes, spinHistory }) => {
       </div>
 
       <div
-        className="flex-1 mt-3! p-2! space-y-3 overflow-y-auto custom-scrollbar"
+        className="flex-1 mt-4! p-2! space-y-12! pl-16!"
         style={{ maxHeight: "calc(100vh - 310px)" }}
       >
         {prizes.map((prize, index) => {
@@ -30,7 +30,7 @@ export const PrizeList = ({ prizes, spinHistory }) => {
           return (
             <motion.div
               key={prize.id}
-              className="flex items-center gap-3 p-3! mb-2! rounded-xl bg-white border-2"
+              className="flex items-center gap-3 "
               style={{
                 borderColor:
                   prize.quantity > 0 ? COLORS.neutral.lightGray : "#E5E7EB",
@@ -40,7 +40,7 @@ export const PrizeList = ({ prizes, spinHistory }) => {
               animate={{ opacity: prize.quantity > 0 ? 1 : 0.5, x: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <div
+              {/* <div
                 className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
                 style={{
                   background: `linear-gradient(135deg, ${COLORS.primary.red}20, ${COLORS.primary.gold}20)`,
@@ -48,14 +48,11 @@ export const PrizeList = ({ prizes, spinHistory }) => {
               >
                 <Icon
                   className="w-6 h-6"
-                  style={{ color: COLORS.primary.red }}
+                  style={{ color: COLORS.primary.lightGold }}
                 />
-              </div>
+              </div> */}
               <div className="flex-1 min-w-0">
-                <p
-                  className="font-bold text-sm truncate"
-                  style={{ color: COLORS.primary.darkRed }}
-                >
+                <p className="font-bold text-sm truncate text-red-500!">
                   {prize.description}
                 </p>
                 {/* <p
@@ -65,7 +62,11 @@ export const PrizeList = ({ prizes, spinHistory }) => {
                   {prize.description}
                 </p> */}
                 <p className="text-xs text-gray-500">
-                  Còn {prize.quantity} giải
+                  Còn{" "}
+                  <span className="text-yellow-500 font-medium!">
+                    {prize.quantity}
+                  </span>{" "}
+                  giải
                 </p>
               </div>
             </motion.div>
