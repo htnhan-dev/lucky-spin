@@ -23,6 +23,9 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
   const [currentSpinDuration, setCurrentSpinDuration] = useState(null); // Duration của lần quay hiện tại
 
   const timeoutRefs = useRef([]);
+  const pickQueueRef = useRef([]); // Queue để lưu các lần pick đang chờ
+  const isProcessingRef = useRef(false); // Flag để biết có đang xử lý không
+
   const clearAllTimeouts = useCallback(() => {
     timeoutRefs.current.forEach((t) => clearTimeout(t));
     timeoutRefs.current = [];
@@ -40,17 +43,16 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
       // ignore
     }
   }, []);
-  const startGame = useCallback(() => {
-    // Click vào bao lì xì → Animation scroll qua users (slot machine)
-    if (gameState !== GAME_STATE.IDLE && gameState !== GAME_STATE.AUTO_PICKING)
+
+  // Hàm thực hiện animation pick 1 user
+  const processSinglePick = useCallback(() => {
+    if (isProcessingRef.current) return; // Đang xử lý rồi
+    if (selectedUsers.length >= 4) {
+      pickQueueRef.current = []; // Clear queue nếu đã đủ
       return;
-    if (selectedUsers.length >= 4) return;
+    }
 
-    // IMPORTANT: Double check để tránh race condition
-    if (isAnimating) return;
-
-    setGameState(GAME_STATE.AUTO_PICKING);
-    setIsAnimating(true);
+    isProcessingRef.current = true;
 
     // Lấy danh sách users chưa được chọn VÀ chưa trúng giải trong lịch sử
     const winnersSet = new Set(spinHistory.map((h) => h.user.id));
@@ -64,6 +66,8 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     if (availableUsers.length === 0) {
       setGameState(GAME_STATE.IDLE);
       setIsAnimating(false);
+      isProcessingRef.current = false;
+      pickQueueRef.current = []; // Clear queue
 
       alert(
         "⚠️ ĐÃ HẾT NGƯỜI CHƠI!\n\n" +
@@ -75,36 +79,31 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
       return;
     }
 
+    setGameState(GAME_STATE.AUTO_PICKING);
+    setIsAnimating(true);
+
     // Chọn user cuối cùng ngay từ đầu
     const finalUser =
       availableUsers[Math.floor(Math.random() * availableUsers.length)];
 
-    // Animation: Nhảy RANDOM qua các users - NHANH HƠN để mượt mà
+    // Animation: Nhảy RANDOM qua các users
     let currentScroll = 0;
-    const scrollSpeed = 250; // Nhanh hơn (500ms → 200ms)
-    const minScrolls = 5; // Tăng số lần scroll để vẫn có hiệu ứng dài
-    const maxScrolls = 10;
+    const scrollSpeed = 200;
+    const minScrolls = 3;
+    const maxScrolls = 7;
 
     const totalScrolls =
       Math.floor(Math.random() * (maxScrolls - minScrolls + 1)) + minScrolls;
-    const maxStep = 8; // bước nhảy tối đa
+    const maxStep = 8;
 
     let currentIndex = Math.floor(Math.random() * availableUsers.length);
 
     const scrollInterval = setInterval(() => {
-      // Tính tiến trình (0 → 1)
       const progress = currentScroll / totalScrolls;
-
-      // Càng về cuối → bước càng nhỏ
       const dynamicMaxStep = Math.max(1, Math.floor((1 - progress) * maxStep));
-
-      // Random bước nhảy
       const step = Math.floor(Math.random() * dynamicMaxStep) + 1;
-
-      // Random hướng
       const direction = Math.random() < 0.5 ? -1 : 1;
 
-      // Cập nhật index (có wrap)
       currentIndex =
         (currentIndex + step * direction + availableUsers.length) %
         availableUsers.length;
@@ -114,16 +113,12 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
 
       currentScroll++;
 
-      // Kết thúc scroll
       if (currentScroll >= totalScrolls) {
         clearInterval(scrollInterval);
-
-        // Highlight user trúng cuối cùng
         setHighlightedUserId(finalUser.id);
 
         setTimeout(() => {
           setSelectedUsers((prev) => {
-            // IMPORTANT: Double check để tránh vượt quá 4 users
             if (prev.length >= 4) {
               console.warn("⚠️ Already have 4 users, skipping add");
               setGameState(GAME_STATE.READY_TO_SPIN);
@@ -143,12 +138,37 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
 
           setHighlightedUserId(null);
           setIsAnimating(false);
-        }, 1000); // dừng 1s cho rõ
+          isProcessingRef.current = false;
+
+          // Sau khi xong, check queue xem còn pick nào đang chờ không
+          setTimeout(() => {
+            if (pickQueueRef.current.length > 0) {
+              pickQueueRef.current.shift(); // Bỏ item đầu
+              processSinglePick(); // Xử lý tiếp
+            }
+          }, 100); // Delay nhỏ để smooth
+        }, 1000);
       }
     }, scrollSpeed);
 
     timeoutRefs.current.push(scrollInterval);
-  }, [gameState, users, selectedUsers, spinHistory, isAnimating]);
+  }, [users, selectedUsers, spinHistory]);
+
+  const startGame = useCallback(() => {
+    // Click vào bao lì xì → Thêm vào queue
+    if (gameState !== GAME_STATE.IDLE && gameState !== GAME_STATE.AUTO_PICKING)
+      return;
+    if (selectedUsers.length >= 4) return;
+
+    // Thêm vào queue
+    pickQueueRef.current.push(true);
+
+    // Nếu chưa đang xử lý thì bắt đầu
+    if (!isProcessingRef.current) {
+      pickQueueRef.current.shift(); // Bỏ item vừa thêm vì sẽ xử lý ngay
+      processSinglePick();
+    }
+  }, [gameState, selectedUsers, processSinglePick]);
   const spinWheel = useCallback(() => {
     console.log("🎰 spinWheel called", {
       gameState,
@@ -207,7 +227,17 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
   }, [gameState, selectedUsers, availablePrizes]);
   // Remove a selected user by id so another user can be chosen in their place
   const removeSelectedUser = useCallback((userId) => {
-    setSelectedUsers((prev) => prev.filter((u) => u.id !== userId));
+    setSelectedUsers((prev) => {
+      const newUsers = prev.filter((u) => u.id !== userId);
+
+      // Nếu còn dưới 4 users sau khi xóa → reset về IDLE để có thể pick lại
+      if (newUsers.length < 4) {
+        setGameState(GAME_STATE.IDLE);
+      }
+
+      return newUsers;
+    });
+
     // If the removed user was the current winner, clear winner
     setCurrentWinner((cw) => (cw && cw.id === userId ? null : cw));
   }, []);
