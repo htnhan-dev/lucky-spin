@@ -25,6 +25,7 @@ export const RedEnvelope = ({
   onClick,
   onReveal, // Callback khi click để mở bao
   onRemove, // Callback để xóa user khỏi envelope
+  luckyStarUser, // User đã trúng ngôi sao hi vọng
 }) => {
   const [showConfetti, setShowConfetti] = useState(false);
 
@@ -160,6 +161,22 @@ export const RedEnvelope = ({
           >
             {user ? (
               <>
+                {/* Lucky Star Badge - CHỈ HIỆN KHI ĐÃ MỞ BAO LÌ XÌ */}
+                {isRevealed &&
+                  luckyStarUser &&
+                  user.id === luckyStarUser.id && (
+                    <motion.div
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: "spring", stiffness: 200 }}
+                      className="absolute -top-2 -right-2 z-20"
+                      style={{
+                        filter: "drop-shadow(0 0 8px rgba(255, 215, 0, 0.8))",
+                      }}
+                    >
+                      <span className="text-4xl">⭐</span>
+                    </motion.div>
+                  )}
                 {/* Emoji bao lì xì */}
                 <motion.div
                   className="mb-2 text-3xl"

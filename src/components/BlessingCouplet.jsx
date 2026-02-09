@@ -7,6 +7,7 @@ export const BlessingCouplet = ({
   message,
   userName,
   prizeName,
+  hasLuckyStar = false, // Flag để biết có trúng sao không
 }) => {
   const [leftLine = "", rightLine = ""] = message
     ? message.split("\n").map((s) => s.trim())
@@ -63,6 +64,30 @@ export const BlessingCouplet = ({
                   <p className="text-4xl font-bold text-yellow-300">
                     {prizeName}
                   </p>
+
+                  {/* Lucky Star */}
+                  {hasLuckyStar && (
+                    <motion.div
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{
+                        delay: 0.3,
+                        type: "spring",
+                        stiffness: 200,
+                      }}
+                      className="mt-4 flex items-center justify-center gap-2"
+                    >
+                      <span className="text-6xl">⭐</span>
+                      <div className="text-left">
+                        <p className="text-2xl font-black text-yellow-400">
+                          NGÔI SAO HI VỌNG!
+                        </p>
+                        <p className="text-sm text-yellow-200">
+                          Chúc mừng bạn đã trúng ngôi sao may mắn
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
 
                 {/* Blessing text */}

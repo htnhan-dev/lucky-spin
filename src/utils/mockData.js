@@ -74,6 +74,16 @@ export const SAMPLE_USERS = Array.from({ length: 100 }, (_, i) => ({
 // Danh sách giải thưởng theo yêu cầu
 // Cơ cấu: Đặc biệt (6), Nhất (6), Nhì (28), Ba (36), Tư (60)
 // TRỌNG SỐ NGHỊCH: Giải càng lớn → weight càng THẤP → xác suất càng THẤP
+/* 
+  - Tổng giải: 6 + 6 + 28 + 36 + 60 = 136
+  - Tổng weight: 2 + 4 + 8 + 15 + 25 = 54
+  - Xác suất trúng từng giải:
+  Đặc biệt: 2 / 54 ≈ 3.7%
+  Nhất: 4 / 54 ≈ 7.4%
+  Nhì: 8 / 54 ≈ 14.8%
+  Ba: 15 / 54 ≈ 27.8%
+  Tư: 25 / 54 ≈ 46.3%
+*/
 export const SAMPLE_PRIZES = [
   {
     id: "prize-special",
@@ -85,7 +95,7 @@ export const SAMPLE_PRIZES = [
     icon: "Trophy",
     color: "#FFD700",
     quantity: 6,
-    weight: 1, // Xác suất thấp nhất
+    weight: 2, // Xác suất thấp nhất
     tier: 5, // Tier cao nhất (dùng cho max prize ceiling)
   },
   {
@@ -98,7 +108,7 @@ export const SAMPLE_PRIZES = [
     icon: "Award",
     color: "#C0C0C0",
     quantity: 6,
-    weight: 2, // Xác suất thấp
+    weight: 4, // Xác suất thấp
     tier: 4,
   },
   {
@@ -111,7 +121,7 @@ export const SAMPLE_PRIZES = [
     icon: "Medal",
     color: "#CD7F32",
     quantity: 28,
-    weight: 5, // Xác suất trung bình
+    weight: 8, // Xác suất trung bình
     tier: 3,
   },
   {
@@ -124,7 +134,7 @@ export const SAMPLE_PRIZES = [
     icon: "Gift",
     color: "#F97316",
     quantity: 36,
-    weight: 10, // Xác suất cao
+    weight: 15, // Xác suất cao
     tier: 2,
   },
   {
@@ -137,7 +147,7 @@ export const SAMPLE_PRIZES = [
     icon: "Sparkles",
     color: "#10B981",
     quantity: 60,
-    weight: 20, // Xác suất cao nhất
+    weight: 25, // Xác suất cao nhất
     tier: 1,
   },
 ];

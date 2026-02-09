@@ -88,6 +88,8 @@ export const LuckySpinPage = () => {
     openedEnvelopes,
     revealingEnvelope,
     currentSpinDuration,
+    luckyStarCount,
+    luckyStarUser,
     startGame,
     spinWheel,
     resetRound,
@@ -112,6 +114,10 @@ export const LuckySpinPage = () => {
         const randomIndex = Math.floor(Math.random() * TET_BLESSINGS.length);
         const randomBlessing = TET_BLESSINGS[randomIndex];
 
+        // Check xem user này có trúng sao không
+        const isLuckyStar =
+          luckyStarUser && allocation.user.id === luckyStarUser.id;
+
         // Show blessing modal
         setBlessingModal({
           show: true,
@@ -121,13 +127,14 @@ export const LuckySpinPage = () => {
             allocation.prize.displayValue ||
             allocation.prize.description ||
             allocation.prize.name,
+          hasLuckyStar: isLuckyStar, // Thêm flag cho lucky star
         });
 
         // Call original reveal function
         revealEnvelope(index);
       }
     },
-    [userPrizes, revealEnvelope],
+    [userPrizes, revealEnvelope, luckyStarUser],
   );
 
   return (
@@ -158,7 +165,7 @@ export const LuckySpinPage = () => {
       <div className="relative z-10 min-h-screen flex flex-col">
         {/* TOP LEFT - Khối Sáng Tạo Sản Phẩm */}
         <motion.div
-          className="fixed left-6 top-6 z-20"
+          className="fixed left-6 top-6 z-20 flex flex-col gap-3"
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.3 }}
@@ -211,6 +218,49 @@ export const LuckySpinPage = () => {
               Khối Sáng Tạo Sản Phẩm
             </motion.div>
           </div>
+
+          {/* Lucky Star Counter */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8 }}
+            className="px-6 py-3 relative overflow-hidden"
+            style={{
+              backgroundColor: "rgba(250, 204, 21, 0.15)",
+              border: "3px solid #FACC15",
+              borderRadius: "15px",
+              boxShadow: "0 8px 20px rgba(0,0,0,0.3)",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <motion.span
+                animate={{
+                  scale: luckyStarCount > 0 ? [1, 1.2, 1] : 1,
+                  rotate: luckyStarCount > 0 ? [0, 10, -10, 0] : 0,
+                }}
+                transition={{
+                  duration: 0.5,
+                  repeat: luckyStarCount > 0 ? Infinity : 0,
+                  repeatDelay: 2,
+                }}
+                className="text-3xl"
+                style={{
+                  filter: "drop-shadow(0 0 8px rgba(255, 215, 0, 0.8))",
+                }}
+              >
+                ⭐
+              </motion.span>
+              <div>
+                <p className="text-yellow-300 text-xs font-semibold leading-tight">
+                  Ngôi Sao Hi Vọng
+                </p>
+                <p className="text-white font-black text-lg leading-tight">
+                  {luckyStarCount} / 6
+                </p>
+              </div>
+            </div>
+          </motion.div>
         </motion.div>
 
         {/* LEFT BANNER - Vertical Text */}
@@ -466,6 +516,7 @@ export const LuckySpinPage = () => {
                       isRevealing={revealingEnvelope === index}
                       isRevealed={openedEnvelopes.includes(index)}
                       isHighlighted={highlightedEnvelopeIndex === index}
+                      luckyStarUser={luckyStarUser}
                     />
                   );
                 })}
@@ -691,6 +742,7 @@ export const LuckySpinPage = () => {
         message={blessingModal.message}
         userName={blessingModal.userName}
         prizeName={blessingModal.prizeName}
+        hasLuckyStar={blessingModal.hasLuckyStar}
       />
 
       {/* REMOVED: Winner Modal - Không cần nữa vì paper scroll đã hiển thị giải */}

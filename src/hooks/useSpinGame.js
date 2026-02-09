@@ -22,6 +22,10 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
   const [revealingEnvelope, setRevealingEnvelope] = useState(null); // Bao đang mở
   const [currentSpinDuration, setCurrentSpinDuration] = useState(null); // Duration của lần quay hiện tại
 
+  // NGÔI SAO HI VỌNG
+  const [luckyStarCount, setLuckyStarCount] = useState(0); // Số ngôi sao đã phát (max 6)
+  const [luckyStarUser, setLuckyStarUser] = useState(null); // User trúng sao trong lượt này (1 lượt chỉ 1 user)
+
   const timeoutRefs = useRef([]);
   const pickQueueRef = useRef([]); // Queue để lưu các lần pick đang chờ
   const isProcessingRef = useRef(false); // Flag để biết có đang xử lý không
@@ -158,7 +162,24 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
             // QUAN TRỌNG: Sync ngay vào ref để lần pick tiếp theo biết
             currentSelectedUsersRef.current = newUsers;
 
+            // NGÔI SAO HI VỌNG: Nếu đủ 4 users → Check xem user nào trúng sao
             if (newUsers.length === 4) {
+              const luckyStarPosition =
+                sessionStorage.getItem("luckyStarPosition");
+              if (
+                luckyStarPosition !== null &&
+                luckyStarCount < 6 &&
+                !luckyStarUser
+              ) {
+                const position = parseInt(luckyStarPosition);
+                const luckyUser = newUsers[position];
+                console.log(
+                  `⭐ User "${luckyUser.name}" at position ${position} won the lucky star!`,
+                );
+                setLuckyStarUser(luckyUser);
+                setLuckyStarCount((prev) => prev + 1);
+                sessionStorage.removeItem("luckyStarPosition");
+              }
               setTimeout(() => setGameState(GAME_STATE.READY_TO_SPIN), 500);
             } else {
               setGameState(GAME_STATE.IDLE);
@@ -183,13 +204,22 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     }, scrollSpeed);
 
     timeoutRefs.current.push(scrollInterval);
-  }, [users, spinHistory]);
+  }, [users, spinHistory, luckyStarCount, luckyStarUser]);
 
   const startGame = useCallback(() => {
     // Click vào bao lì xì → Thêm vào queue
     if (gameState !== GAME_STATE.IDLE && gameState !== GAME_STATE.AUTO_PICKING)
       return;
     if (selectedUsers.length >= 4) return;
+
+    // NGÔI SAO HI VỌNG: Nếu là lượt mới (chưa chọn ai) → Random xem có phát sao không
+    if (selectedUsers.length === 0 && luckyStarCount < 6 && !luckyStarUser) {
+      // Random 1 user trong 4 users sẽ được pick để trúng sao (25% mỗi vị trí)
+      const randomPosition = Math.floor(Math.random() * 4); // 0-3
+      console.log(`⭐ Lucky star will be at position ${randomPosition}`);
+      // Lưu vị trí này để sau khi pick đủ 4 users sẽ gán sao
+      sessionStorage.setItem("luckyStarPosition", randomPosition.toString());
+    }
 
     // Thêm vào queue
     pickQueueRef.current.push(true);
@@ -199,7 +229,13 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
       pickQueueRef.current.shift(); // Bỏ item vừa thêm vì sẽ xử lý ngay
       processSinglePick();
     }
-  }, [gameState, selectedUsers, processSinglePick]);
+  }, [
+    gameState,
+    selectedUsers,
+    processSinglePick,
+    luckyStarCount,
+    luckyStarUser,
+  ]);
   const spinWheel = useCallback(() => {
     console.log("🎰 spinWheel called", {
       gameState,
@@ -388,6 +424,9 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     setOpenedEnvelopes([]);
     setRevealingEnvelope(null);
     setCurrentSpinDuration(null);
+    // Reset lucky star user cho lượt mới (KHÔNG reset count)
+    setLuckyStarUser(null);
+    sessionStorage.removeItem("luckyStarPosition");
   }, [clearAllTimeouts, prizes]);
 
   // Reset toàn bộ game - BAO GỒM history
@@ -406,6 +445,10 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     setOpenedEnvelopes([]);
     setRevealingEnvelope(null);
     setCurrentSpinDuration(null);
+    // Reset lucky star
+    setLuckyStarCount(0);
+    setLuckyStarUser(null);
+    sessionStorage.removeItem("luckyStarPosition");
   }, [prizes, clearAllTimeouts]);
   return {
     gameState,
@@ -422,6 +465,9 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     openedEnvelopes,
     revealingEnvelope,
     currentSpinDuration, // Duration của lần quay hiện tại (để sync với LuckyWheel)
+    // Lucky Star
+    luckyStarCount,
+    luckyStarUser,
     // Functions
     startGame,
     spinWheel,
