@@ -10,7 +10,7 @@ export const PrizeList = ({ prizes, spinHistory }) => {
   };
 
   return (
-    <div className="h-full flex flex-col p-5!">
+    <div className="h-full flex flex-col p-5! bg-[#150F3A]!">
       <div className="mt-14!">
         {/* <h2 className="text-xl font-black mb-2 text-center text-white">
           Giải thưởng
@@ -22,7 +22,7 @@ export const PrizeList = ({ prizes, spinHistory }) => {
       </div>
 
       <div
-        className="flex-1 mt-4! p-2! space-y-12! pl-16!"
+        className="flex-1 mt-4! p-2! space-y-5! pl-16!"
         style={{ maxHeight: "calc(100vh - 310px)" }}
       >
         {prizes.map((prize, index) => {
@@ -30,12 +30,12 @@ export const PrizeList = ({ prizes, spinHistory }) => {
           return (
             <motion.div
               key={prize.id}
-              className="flex items-center gap-3 "
-              style={{
-                borderColor:
-                  prize.quantity > 0 ? COLORS.neutral.lightGray : "#E5E7EB",
-                opacity: prize.quantity > 0 ? 1 : 0.5,
-              }}
+              className="flex items-center p-2! gap-3 border-2 border-solid rounded-3xl border-yellow-500"
+              // style={{
+              //   borderColor:
+              //     prize.quantity > 0 ? COLORS.neutral.lightGray : "#E5E7EB",
+              //   opacity: prize.quantity > 0 ? 1 : 0.5,
+              // }}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: prize.quantity > 0 ? 1 : 0.5, x: 0 }}
               transition={{ delay: index * 0.1 }}

@@ -100,13 +100,16 @@ export const RedEnvelope = ({
         <div
           className="relative w-28 h-40 rounded-xl flex flex-col items-center justify-center overflow-hidden shadow-xl"
           style={{
-            background:
+            // Logic đơn giản - CHỈ DÙNG backgroundImage:
+            // 1. Đã mở (isRevealed + prize) -> bg vàng gradient
+            // 2. Đã có user nhưng chưa mở -> bg đỏ gradient
+            // 3. Chưa có user -> bg blx1-4 (hình nền)
+            backgroundImage:
               isRevealed && prize
                 ? `linear-gradient(135deg, ${COLORS.primary.gold} 0%, ${COLORS.primary.lightGold || "#DAA520"} 100%)`
-                : undefined,
-            backgroundImage: !isRevealed
-              ? `url(${envelopeBackgrounds[index % 4]})`
-              : undefined,
+                : user && !isRevealed
+                  ? `linear-gradient(135deg, ${COLORS.primary.red} 0%, #B91C1C 100%)`
+                  : `url(${envelopeBackgrounds[index % 4]})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
             backgroundRepeat: "no-repeat",
