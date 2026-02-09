@@ -253,7 +253,7 @@ export const RedEnvelope = ({
         </motion.button>
       )}
 
-      {isSelected && (
+      {/* {isSelected && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -266,7 +266,7 @@ export const RedEnvelope = ({
             Selected
           </div>
         </motion.div>
-      )}
+      )} */}
     </motion.div>
   );
 };
