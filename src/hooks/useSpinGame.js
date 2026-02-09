@@ -46,6 +46,9 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
       return;
     if (selectedUsers.length >= 4) return;
 
+    // IMPORTANT: Double check để tránh race condition
+    if (isAnimating) return;
+
     setGameState(GAME_STATE.AUTO_PICKING);
     setIsAnimating(true);
 
@@ -120,6 +123,13 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
 
         setTimeout(() => {
           setSelectedUsers((prev) => {
+            // IMPORTANT: Double check để tránh vượt quá 4 users
+            if (prev.length >= 4) {
+              console.warn("⚠️ Already have 4 users, skipping add");
+              setGameState(GAME_STATE.READY_TO_SPIN);
+              return prev;
+            }
+
             const newUsers = [...prev, finalUser];
 
             if (newUsers.length === 4) {
@@ -138,14 +148,30 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     }, scrollSpeed);
 
     timeoutRefs.current.push(scrollInterval);
-  }, [gameState, users, selectedUsers, spinHistory]);
+  }, [gameState, users, selectedUsers, spinHistory, isAnimating]);
   const spinWheel = useCallback(() => {
+    console.log("🎰 spinWheel called", {
+      gameState,
+      selectedUsersLength: selectedUsers.length,
+      availablePrizesLength: availablePrizes.length,
+      availablePrizes: availablePrizes.map((p) => ({
+        id: p.id,
+        name: p.name,
+        quantity: p.quantity,
+      })),
+    });
+
     if (
       gameState !== GAME_STATE.READY_TO_SPIN &&
       gameState !== GAME_STATE.PRIZES_ALLOCATED
-    )
+    ) {
+      console.log("❌ Wrong gameState:", gameState);
       return;
-    if (selectedUsers.length !== 4) return;
+    }
+    if (selectedUsers.length !== 4) {
+      console.log("❌ Not enough users:", selectedUsers.length);
+      return;
+    }
 
     // Calculate dynamic duration (function or static value) - TÍNH 1 LẦN DUY NHẤT
     const spinDuration =
@@ -291,6 +317,8 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     setSelectedUsers([]);
     setCurrentWinner(null);
     // KHÔNG reset spinHistory - giữ nguyên lịch sử
+    // Reset availablePrizes về prizes gốc (vì prizes trong context đã được update rồi)
+    setAvailablePrizes(prizes);
     setIsAnimating(false);
     setHighlightedUserId(null);
     setHighlightedEnvelopeIndex(null);
@@ -299,7 +327,7 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     setOpenedEnvelopes([]);
     setRevealingEnvelope(null);
     setCurrentSpinDuration(null);
-  }, [clearAllTimeouts]);
+  }, [clearAllTimeouts, prizes]);
 
   // Reset toàn bộ game - BAO GỒM history
   const resetGame = useCallback(() => {
