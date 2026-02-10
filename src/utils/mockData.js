@@ -181,9 +181,32 @@ export const selectMaxPrizeTier = (
     // Bước 1: ưu tiên những giải có đủ số lượng >= requiredCount
     candidates = prizes.filter((p) => p.quantity >= requiredCount);
 
+    // Nếu có những giải top-tier còn < requiredCount (ví dụ Giải Đặc Biệt ít)
+    // → Cho phép thêm chúng vào candidate pool để có cơ hội xuất hiện
+    const maxAvailableTier = Math.max(
+      0,
+      ...prizes.filter((p) => p.quantity > 0).map((p) => p.tier),
+    );
+
+    const topTierLowQty = prizes.filter(
+      (p) =>
+        p.quantity > 0 &&
+        p.quantity < requiredCount &&
+        p.tier === maxAvailableTier,
+    );
+
     // Nếu không có giải đủ số lượng, hạ cấp: lấy tất cả giải còn > 0
     if (candidates.length === 0) {
       candidates = prizes.filter((p) => p.quantity > 0);
+    } else if (topTierLowQty.length > 0) {
+      // Gộp top-tier low-quantity vào candidates (loại trùng)
+      const ids = new Set(candidates.map((c) => c.id));
+      for (const t of topTierLowQty) {
+        if (!ids.has(t.id)) {
+          candidates.push(t);
+          ids.add(t.id);
+        }
+      }
     }
   }
 
@@ -193,11 +216,33 @@ export const selectMaxPrizeTier = (
   }
 
   // Tính weight động = baseWeight * (remaining / originalQuantity)
+  // Tính weight động, với boost cho top-tier có quantity < requiredCount
   const dynamicWeights = candidates.map((prize) => {
     const originalPrize = SAMPLE_PRIZES.find((p) => p.id === prize.id);
     const baseWeight = originalPrize?.weight || prize.weight;
     const originalQty = originalPrize?.quantity || prize.quantity || 1;
-    const dynamicWeight = baseWeight * (prize.quantity / originalQty);
+    const scarcity = 1 - prize.quantity / originalQty; // 0..1
+
+    // Boost factor only for top-tier low-qty prizes included earlier
+    const maxAvailableTier = Math.max(
+      0,
+      ...prizes.filter((p) => p.quantity > 0).map((p) => p.tier),
+    );
+    const isTopTierLowQty =
+      prize.quantity > 0 &&
+      prize.quantity < requiredCount &&
+      prize.tier === maxAvailableTier;
+
+    // Base dynamic weight scales with remaining
+    let dynamicWeight = baseWeight * (prize.quantity / originalQty);
+
+    if (isTopTierLowQty) {
+      // Increase weight proportionally to scarcity (configurable factor)
+      const boostFactor = 1.0; // 0..1.0 (1.0 means up to double)
+      const multiplier = 1 + scarcity * boostFactor;
+      dynamicWeight *= multiplier;
+    }
+
     return dynamicWeight;
   });
 

@@ -36,6 +36,7 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
   const isProcessingRef = useRef(false); // Flag để biết có đang xử lý không
   const currentSelectedUsersRef = useRef([]); // Track selected users hiện tại (real-time)
   const lastPickTimeRef = useRef(0); // Track thời gian pick cuối cùng (tránh rapid clicks)
+  const inventoryAdjustedForRoundRef = useRef(false); // Track if we already deducted inventory for current round
 
   const clearAllTimeouts = useCallback(() => {
     timeoutRefs.current.forEach((t) => clearTimeout(t));
@@ -347,8 +348,41 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
 
       // Bước 3: Set userPrizes (CHƯA trừ số lượng - đợi mở hết 4 bao)
       setUserPrizes(allocations);
+
+      // 🔒 Ngay lập tức trừ inventory trong state/context để tránh oversubscribe
+      if (allocations && allocations.length > 0) {
+        const usedCounts = allocations.reduce((acc, a) => {
+          acc[a.prize.id] = (acc[a.prize.id] || 0) + 1;
+          return acc;
+        }, {});
+
+        const updated = availablePrizes
+          .map((p) => {
+            const used = usedCounts[p.id] || 0;
+            const newQuantity = Math.max(0, p.quantity - used);
+            // Update context immediately so other parts see correct remaining
+            if (updatePrizeQuantity && used > 0) {
+              updatePrizeQuantity(p.id, newQuantity);
+            }
+            return {
+              ...p,
+              quantity: newQuantity,
+            };
+          })
+          .filter((p) => p.quantity > 0);
+
+        setAvailablePrizes(updated);
+        inventoryAdjustedForRoundRef.current = true;
+      }
     }, spinDuration * 1000); // Đợi animation vòng quay xong (25s)
-  }, [gameState, selectedUsers, availablePrizes, spinHistory, users]);
+  }, [
+    gameState,
+    selectedUsers,
+    availablePrizes,
+    spinHistory,
+    users,
+    updatePrizeQuantity,
+  ]);
   // Remove a selected user by id so another user can be chosen in their place
   const removeSelectedUser = useCallback((userId) => {
     setSelectedUsers((prev) => {
@@ -429,27 +463,35 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
         if (openedEnvelopes.length + 1 >= selectedUsers.length) {
           setGameState(GAME_STATE.ROUND_COMPLETE);
 
-          // ĐÃ MỞ HẾT 4 BAO → Bây giờ mới trừ số lượng tồn kho
-          const updatedPrizes = availablePrizes
-            .map((p) => {
-              const usedCount = userPrizes.filter(
-                (a) => a.prize.id === p.id,
-              ).length;
-              const newQuantity = Math.max(0, p.quantity - usedCount);
+          let updatedPrizes = [];
+          if (!inventoryAdjustedForRoundRef.current) {
+            // ĐÃ MỞ HẾT 4 BAO → Bây giờ mới trừ số lượng tồn kho (fallback)
+            updatedPrizes = availablePrizes
+              .map((p) => {
+                const usedCount = userPrizes.filter(
+                  (a) => a.prize.id === p.id,
+                ).length;
+                const newQuantity = Math.max(0, p.quantity - usedCount);
 
-              // Update context để sync với wheel display
-              if (updatePrizeQuantity && usedCount > 0) {
-                updatePrizeQuantity(p.id, newQuantity);
-              }
+                // Update context để sync với wheel display
+                if (updatePrizeQuantity && usedCount > 0) {
+                  updatePrizeQuantity(p.id, newQuantity);
+                }
 
-              return {
-                ...p,
-                quantity: newQuantity,
-              };
-            })
-            .filter((p) => p.quantity > 0); // Loại bỏ giải hết
+                return {
+                  ...p,
+                  quantity: newQuantity,
+                };
+              })
+              .filter((p) => p.quantity > 0); // Loại bỏ giải hết
 
-          setAvailablePrizes(updatedPrizes);
+            setAvailablePrizes(updatedPrizes);
+          } else {
+            // Inventory đã được trừ ngay khi allocate → chỉ đảm bảo loại bỏ prize hết
+            updatedPrizes = availablePrizes.filter((p) => p.quantity > 0);
+            setAvailablePrizes(updatedPrizes);
+            inventoryAdjustedForRoundRef.current = false; // reset flag
+          }
 
           // Reconciliation: Nếu tất cả người chơi đã được award (remainingPlayers = 0)
           // nhưng vẫn còn prize tồn (tổng quantity > 0) → đây là trạng thái không hợp lệ
