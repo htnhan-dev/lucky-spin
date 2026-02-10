@@ -74,16 +74,15 @@ export const SAMPLE_USERS = Array.from({ length: 100 }, (_, i) => ({
 // Danh sách giải thưởng theo yêu cầu
 // Cơ cấu: Đặc biệt (6), Nhất (6), Nhì (28), Ba (36), Tư (60)
 // TRỌNG SỐ NGHỊCH: Giải càng lớn → weight càng THẤP → xác suất càng THẤP
-/* 
-  - Tổng giải: 6 + 6 + 28 + 36 + 60 = 136
-  - Tổng weight: 2 + 4 + 8 + 15 + 25 = 54
-  - Xác suất trúng từng giải:
-  Đặc biệt: 2 / 54 ≈ 3.7%
-  Nhất: 4 / 54 ≈ 7.4%
-  Nhì: 8 / 54 ≈ 14.8%
-  Ba: 15 / 54 ≈ 27.8%
-  Tư: 25 / 54 ≈ 46.3%
+/*
+Xác suất mong muốn:
+- Đặc biệt: 8%
+- Nhất: 17%
+- Nhì: 23%
+- Ba: 27%
+- Tư: 25%
 */
+
 export const SAMPLE_PRIZES = [
   {
     id: "prize-special",
@@ -95,8 +94,8 @@ export const SAMPLE_PRIZES = [
     icon: "Trophy",
     color: "#FFD700",
     quantity: 6,
-    weight: 2, // Xác suất thấp nhất
-    tier: 5, // Tier cao nhất (dùng cho max prize ceiling)
+    weight: 8,
+    tier: 5,
   },
   {
     id: "prize-first",
@@ -108,7 +107,7 @@ export const SAMPLE_PRIZES = [
     icon: "Award",
     color: "#C0C0C0",
     quantity: 6,
-    weight: 4, // Xác suất thấp
+    weight: 17,
     tier: 4,
   },
   {
@@ -121,7 +120,7 @@ export const SAMPLE_PRIZES = [
     icon: "Medal",
     color: "#CD7F32",
     quantity: 28,
-    weight: 8, // Xác suất trung bình
+    weight: 23,
     tier: 3,
   },
   {
@@ -134,7 +133,7 @@ export const SAMPLE_PRIZES = [
     icon: "Gift",
     color: "#F97316",
     quantity: 36,
-    weight: 15, // Xác suất cao
+    weight: 27,
     tier: 2,
   },
   {
@@ -147,7 +146,7 @@ export const SAMPLE_PRIZES = [
     icon: "Sparkles",
     color: "#10B981",
     quantity: 60,
-    weight: 25, // Xác suất cao nhất
+    weight: 25,
     tier: 1,
   },
 ];
@@ -160,23 +159,35 @@ export const getRandomUsers = (count = 4) => {
 
 // Helper: Chọn giải TRẦN từ vòng quay (max prize ceiling)
 // Vòng quay chỉ định giải cao nhất có thể trúng trong lượt này
+// CHỈ chọn từ những giải còn hàng > 4 (vì 4 bao lì xì dành cho 4 users trong lượt này)
 export const selectMaxPrizeTier = (prizes) => {
-  // Tính tổng weight
-  const totalWeight = prizes.reduce((sum, prize) => sum + prize.weight, 0);
+  // Lọc chỉ những giải còn hàng > 3 (tối thiểu 4 để dành 4 cho lượt này + 1 dự phòng)
+  const availablePrizes = prizes.filter((p) => p.quantity > 3);
+
+  if (availablePrizes.length === 0) {
+    // Nếu không còn giải nào đủ số lượng, fallback trả về tier thấp nhất
+    return 1;
+  }
+
+  // Tính tổng weight của các giải còn hàng đủ điều kiện
+  const totalWeight = availablePrizes.reduce(
+    (sum, prize) => sum + prize.weight,
+    0,
+  );
 
   // Random số từ 0 đến totalWeight
   let random = Math.random() * totalWeight;
 
-  // Duyệt qua từng giải để tìm giải trần
-  for (const prize of prizes) {
+  // Duyệt qua từng giải còn hàng để tìm giải trần
+  for (const prize of availablePrizes) {
     random -= prize.weight;
     if (random <= 0) {
       return prize.tier; // Trả về tier của giải (1-5)
     }
   }
 
-  // Fallback: trả về tier thấp nhất
-  return 1;
+  // Fallback: trả về tier thấp nhất trong các giải còn hàng đủ điều kiện
+  return availablePrizes[availablePrizes.length - 1].tier;
 };
 
 // Helper: Chọn giải thưởng thực tế dựa trên giải trần (ceiling)
