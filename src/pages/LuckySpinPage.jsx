@@ -493,10 +493,6 @@ export const LuckySpinPage = () => {
               <div className="flex items-center justify-center gap-6">
                 {[0, 1, 2, 3].map((index) => {
                   const allocation = userPrizes[index]; // { user, prize }
-                  // Check xem bao này có bị disable không
-                  // Bao bị disable nếu: index >= selectedUsers.length (vì lượt cuối chỉ có 3 người)
-                  const isDisabledEnvelope = index >= selectedUsers.length;
-
                   return (
                     <RedEnvelope
                       key={index}
@@ -511,11 +507,7 @@ export const LuckySpinPage = () => {
                           ? () => removeSelectedUser(selectedUsers[index].id)
                           : null
                       }
-                      canClick={
-                        canPickUser &&
-                        !selectedUsers[index] &&
-                        !isDisabledEnvelope
-                      }
+                      canClick={canPickUser && !selectedUsers[index]}
                       canReveal={
                         canRevealEnvelopes && !openedEnvelopes.includes(index)
                       }
@@ -523,7 +515,6 @@ export const LuckySpinPage = () => {
                       isRevealed={openedEnvelopes.includes(index)}
                       isHighlighted={highlightedEnvelopeIndex === index}
                       luckyStarUser={luckyStarUser}
-                      isDisabled={isDisabledEnvelope}
                     />
                   );
                 })}

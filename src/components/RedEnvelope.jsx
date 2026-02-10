@@ -26,17 +26,8 @@ export const RedEnvelope = ({
   onReveal, // Callback khi click để mở bao
   onRemove, // Callback để xóa user khỏi envelope
   luckyStarUser, // User đã trúng ngôi sao hi vọng
-  isDisabled, // Bao này bị disable (vì lượt cuối chỉ N người)
 }) => {
   const [showConfetti, setShowConfetti] = useState(false);
-  const [showDisabledTooltip, setShowDisabledTooltip] = useState(false);
-
-  useEffect(() => {
-    if (showDisabledTooltip) {
-      const timer = setTimeout(() => setShowDisabledTooltip(false), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [showDisabledTooltip]);
 
   useEffect(() => {
     if (isRevealed && !showConfetti) {
@@ -63,12 +54,6 @@ export const RedEnvelope = ({
   }, [isRevealed, showConfetti, index]);
 
   const handleClick = () => {
-    // Nếu bao này bị disable, show tooltip
-    if (isDisabled) {
-      setShowDisabledTooltip(true);
-      return;
-    }
-
     if (canClick && onClick) {
       onClick();
     } else if (canReveal && !isRevealed && onReveal) {
@@ -94,19 +79,9 @@ export const RedEnvelope = ({
           repeat: canReveal && !isRevealed ? Infinity : 0, // Lắc liên tục khi có thể mở
         },
       }}
-      whileHover={
-        (canClick || canReveal) && !isRevealed && !isDisabled
-          ? { scale: 1.08 }
-          : {}
-      }
+      whileHover={(canClick || canReveal) && !isRevealed ? { scale: 1.08 } : {}}
       onClick={handleClick}
-      className={`relative text-center ${
-        isDisabled
-          ? "cursor-not-allowed opacity-60"
-          : (canClick || canReveal) && !isRevealed
-            ? "cursor-pointer"
-            : ""
-      }`}
+      className={`relative text-center ${(canClick || canReveal) && !isRevealed ? "cursor-pointer" : ""}`}
     >
       {/* Envelope container */}
       <motion.div className="relative">
@@ -274,20 +249,6 @@ export const RedEnvelope = ({
                 {prize.description}
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Tooltip khi bao bị disable (lượt cuối, không đủ người) */}
-      <AnimatePresence>
-        {showDisabledTooltip && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="absolute -top-16 left-1/2 -translate-x-1/2 bg-yellow-600 text-white text-xs font-semibold px-3! py-1! rounded-lg whitespace-nowrap shadow-lg z-50 pointer-events-none"
-          >
-            ⚠️ Đã hết lượt phân phát cho bao lì xì này
           </motion.div>
         )}
       </AnimatePresence>
