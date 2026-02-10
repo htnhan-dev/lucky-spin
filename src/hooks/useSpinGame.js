@@ -315,9 +315,15 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
 
     // QUAN TRỌNG: Chọn giải trần TRƯỚC khi bắt đầu animation
     // Truyền requiredCount = số users hiện tại để đảm bảo giải chọn đủ số lượng
+    // Và truyền remainingPlayers = số người còn lại chưa trúng (để tránh leftover)
+    const remainingPlayers = users.filter(
+      (u) => !spinHistory.some((h) => h.user.id === u.id),
+    ).length;
+
     const tierFromWheel = selectMaxPrizeTier(
       availablePrizes,
       selectedUsers.length,
+      remainingPlayers,
     );
 
     // Lưu duration và maxPrizeTier để pass xuống LuckyWheel component
@@ -342,7 +348,7 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
       // Bước 3: Set userPrizes (CHƯA trừ số lượng - đợi mở hết 4 bao)
       setUserPrizes(allocations);
     }, spinDuration * 1000); // Đợi animation vòng quay xong (25s)
-  }, [gameState, selectedUsers, availablePrizes]);
+  }, [gameState, selectedUsers, availablePrizes, spinHistory, users]);
   // Remove a selected user by id so another user can be chosen in their place
   const removeSelectedUser = useCallback((userId) => {
     setSelectedUsers((prev) => {
@@ -444,6 +450,29 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
             .filter((p) => p.quantity > 0); // Loại bỏ giải hết
 
           setAvailablePrizes(updatedPrizes);
+
+          // Reconciliation: Nếu tất cả người chơi đã được award (remainingPlayers = 0)
+          // nhưng vẫn còn prize tồn (tổng quantity > 0) → đây là trạng thái không hợp lệ
+          // Action: clear tất cả các prize còn lại (set quantity = 0) và log để debug
+          const totalRemaining = updatedPrizes.reduce(
+            (sum, p) => sum + (p.quantity || 0),
+            0,
+          );
+          const remainingPlayersCount = users.filter(
+            (u) => !spinHistory.some((h) => h.user.id === u.id),
+          ).length;
+
+          if (remainingPlayersCount === 0 && totalRemaining > 0) {
+            // Clear leftovers in context
+            if (updatePrizeQuantity) {
+              updatedPrizes.forEach((p) => updatePrizeQuantity(p.id, 0));
+            }
+            setAvailablePrizes([]);
+            console.warn(
+              "Prize reconciliation: cleared leftover prizes after final round",
+              { totalRemaining, remainingPlayersCount },
+            );
+          }
         } else {
           setGameState(GAME_STATE.PRIZES_ALLOCATED); // Quay lại state shake, chờ mở bao khác
         }
@@ -456,6 +485,8 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
       availablePrizes,
       updatePrizeQuantity,
       selectedUsers,
+      spinHistory,
+      users,
     ],
   );
 

@@ -162,14 +162,29 @@ export const getRandomUsers = (count = 4) => {
 // Vòng quay chỉ định giải cao nhất có thể trúng trong lượt này
 // 🔴 QUAN TRỌNG: CHỈ chọn từ những giải còn hàng >= 4 (đủ để phân bổ cho 4 users)
 // Nếu giải nào < 4, sẽ bỏ qua vì không đủ số lượng
-export const selectMaxPrizeTier = (prizes, requiredCount = 4) => {
+export const selectMaxPrizeTier = (
+  prizes,
+  requiredCount = 4,
+  remainingPlayers = undefined,
+) => {
   // CHÚ Ý: requiredCount = số users sẽ được phân bổ trong lượt này
-  // Bước 1: ưu tiên những giải có đủ số lượng >= requiredCount
-  let candidates = prizes.filter((p) => p.quantity >= requiredCount);
+  // If total remaining prizes equals remainingPlayers, include any prize > 0
+  const totalPrizesLeft = prizes.reduce((sum, p) => sum + (p.quantity || 0), 0);
 
-  // Nếu không có giải đủ số lượng, hạ cấp: lấy tất cả giải còn > 0
-  if (candidates.length === 0) {
+  let candidates;
+  if (
+    typeof remainingPlayers === "number" &&
+    totalPrizesLeft === remainingPlayers
+  ) {
     candidates = prizes.filter((p) => p.quantity > 0);
+  } else {
+    // Bước 1: ưu tiên những giải có đủ số lượng >= requiredCount
+    candidates = prizes.filter((p) => p.quantity >= requiredCount);
+
+    // Nếu không có giải đủ số lượng, hạ cấp: lấy tất cả giải còn > 0
+    if (candidates.length === 0) {
+      candidates = prizes.filter((p) => p.quantity > 0);
+    }
   }
 
   if (candidates.length === 0) {
