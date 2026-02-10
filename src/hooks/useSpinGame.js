@@ -58,11 +58,11 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
   const processSinglePick = useCallback(() => {
     if (isProcessingRef.current) return; // Đang xử lý rồi
 
-    // Check với ref để có giá trị real-time
-    if (currentSelectedUsersRef.current.length >= 4) {
-      pickQueueRef.current = []; // Clear queue nếu đã đủ
-      return;
-    }
+    // ✓ Bỏ check >= 4 vì cho phép flex số lượng users
+    // if (currentSelectedUsersRef.current.length >= 4) {
+    //   pickQueueRef.current = [];
+    //   return;
+    // }
 
     isProcessingRef.current = true;
 
@@ -151,13 +151,6 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
 
         setTimeout(() => {
           setSelectedUsers((prev) => {
-            // Bỏ check >= 4, cho phép quay ngay khi có >= 1 user
-            // if (prev.length >= 4) {
-            //   console.warn("⚠️ Already have 4 users, skipping add");
-            //   setGameState(GAME_STATE.READY_TO_SPIN);
-            //   return prev;
-            // }
-
             const newUsers = [...prev, finalUser];
 
             // QUAN TRỌNG: Sync ngay vào ref để lần pick tiếp theo biết
@@ -194,15 +187,15 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
 
           setHighlightedUserId(null);
           setIsAnimating(false);
+
+          // ✓ Set isProcessingRef = false ĐẦU TIÊN
           isProcessingRef.current = false;
 
-          // Sau khi xong, check queue xem còn pick nào đang chờ không
-          setTimeout(() => {
-            if (pickQueueRef.current.length > 0) {
-              pickQueueRef.current.shift(); // Bỏ item đầu
-              processSinglePick(); // Xử lý tiếp
-            }
-          }, 100); // Delay nhỏ để smooth
+          // ✓ Sau đó lập tức check và xử lý queue tiếp (không cần delay)
+          if (pickQueueRef.current.length > 0) {
+            pickQueueRef.current.shift(); // Bỏ item đầu
+            processSinglePick(); // Gọi lại ngay để xử lý tiếp
+          }
         }, 1000);
       }
     }, scrollSpeed);
