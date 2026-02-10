@@ -1,4 +1,8 @@
-import { ANIMATION_CONFIG, GAME_STATE } from "../utils/constants";
+import {
+  ANIMATION_CONFIG,
+  ENVELOPE_POSITIONS,
+  GAME_STATE,
+} from "../utils/constants";
 import { allocatePrizesForUsers, selectMaxPrizeTier } from "../utils/mockData";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -27,6 +31,7 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
   const [luckyStarUser, setLuckyStarUser] = useState(null); // User trúng sao trong lượt này (1 lượt chỉ 1 user)
 
   const timeoutRefs = useRef([]);
+  const readyToSpinTimeoutRef = useRef(null);
   const pickQueueRef = useRef([]); // Queue để lưu các lần pick đang chờ
   const isProcessingRef = useRef(false); // Flag để biết có đang xử lý không
   const currentSelectedUsersRef = useRef([]); // Track selected users hiện tại (real-time)
@@ -34,6 +39,10 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
   const clearAllTimeouts = useCallback(() => {
     timeoutRefs.current.forEach((t) => clearTimeout(t));
     timeoutRefs.current = [];
+    if (readyToSpinTimeoutRef.current) {
+      clearTimeout(readyToSpinTimeoutRef.current);
+      readyToSpinTimeoutRef.current = null;
+    }
   }, []);
 
   // Sync selectedUsers vào ref
@@ -58,11 +67,11 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
   const processSinglePick = useCallback(() => {
     if (isProcessingRef.current) return; // Đang xử lý rồi
 
-    // ✓ Bỏ check >= 4 vì cho phép flex số lượng users
-    // if (currentSelectedUsersRef.current.length >= 4) {
-    //   pickQueueRef.current = [];
-    //   return;
-    // }
+    // Giới hạn số users được chọn trong 1 lượt bằng số bao (ENVELOPE_POSITIONS)
+    if (currentSelectedUsersRef.current.length >= ENVELOPE_POSITIONS.length) {
+      pickQueueRef.current = []; // Clear queue nếu đã đủ
+      return;
+    }
 
     isProcessingRef.current = true;
 
@@ -162,10 +171,23 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
                 setLuckyStarCount((prev) => prev + 1);
                 sessionStorage.removeItem("luckyStarPosition");
               }
-              setTimeout(() => setGameState(GAME_STATE.READY_TO_SPIN), 500);
+              // Clear any previous ready-to-spin timeout and schedule a fresh one
+              if (readyToSpinTimeoutRef.current) {
+                clearTimeout(readyToSpinTimeoutRef.current);
+              }
+              readyToSpinTimeoutRef.current = setTimeout(() => {
+                setGameState(GAME_STATE.READY_TO_SPIN);
+                readyToSpinTimeoutRef.current = null;
+              }, 500);
             } else if (newUsers.length >= 1) {
               // ✓ Cho phép quay ngay khi có >= 1 user (không cần đợi 4 người)
-              setTimeout(() => setGameState(GAME_STATE.READY_TO_SPIN), 500);
+              if (readyToSpinTimeoutRef.current) {
+                clearTimeout(readyToSpinTimeoutRef.current);
+              }
+              readyToSpinTimeoutRef.current = setTimeout(() => {
+                setGameState(GAME_STATE.READY_TO_SPIN);
+                readyToSpinTimeoutRef.current = null;
+              }, 500);
             } else {
               setGameState(GAME_STATE.IDLE);
             }
@@ -193,7 +215,13 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
 
   const startGame = useCallback(() => {
     // Click vào bao lì xì → Thêm vào queue
-    if (gameState !== GAME_STATE.IDLE && gameState !== GAME_STATE.AUTO_PICKING)
+    // Chỉ chặn khi đang quay hoặc đã phân bổ/đang reveal hoặc round complete
+    if (
+      gameState === GAME_STATE.SPINNING ||
+      gameState === GAME_STATE.PRIZES_ALLOCATED ||
+      gameState === GAME_STATE.REVEALING ||
+      gameState === GAME_STATE.ROUND_COMPLETE
+    )
       return;
     // Cho phép pick unlimited (không giới hạn 4 người, lượt cuối có thể 3 người)
     // if (selectedUsers.length >= 4) return; // ✓ Bỏ logic này
@@ -417,6 +445,10 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     // Reset lucky star user cho lượt mới (KHÔNG reset count)
     setLuckyStarUser(null);
     sessionStorage.removeItem("luckyStarPosition");
+    if (readyToSpinTimeoutRef.current) {
+      clearTimeout(readyToSpinTimeoutRef.current);
+      readyToSpinTimeoutRef.current = null;
+    }
   }, [clearAllTimeouts, prizes]);
 
   // Reset toàn bộ game - BAO GỒM history
@@ -439,6 +471,10 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     setLuckyStarCount(0);
     setLuckyStarUser(null);
     sessionStorage.removeItem("luckyStarPosition");
+    if (readyToSpinTimeoutRef.current) {
+      clearTimeout(readyToSpinTimeoutRef.current);
+      readyToSpinTimeoutRef.current = null;
+    }
   }, [prizes, clearAllTimeouts]);
   return {
     gameState,
@@ -468,7 +504,9 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     revealEnvelope,
     // Flags
     canPickUser:
-      gameState === GAME_STATE.IDLE || gameState === GAME_STATE.AUTO_PICKING,
+      gameState === GAME_STATE.IDLE ||
+      gameState === GAME_STATE.AUTO_PICKING ||
+      gameState === GAME_STATE.READY_TO_SPIN,
     canSpin: gameState === GAME_STATE.READY_TO_SPIN && selectedUsers.length > 0,
     isSpinning: gameState === GAME_STATE.SPINNING,
     hasWinner: currentWinner !== null,
