@@ -161,6 +161,7 @@ export const getRandomUsers = (count = 4) => {
 // Helper: Chọn giải TRẦN từ vòng quay (max prize ceiling)
 // Vòng quay chỉ định giải cao nhất có thể trúng trong lượt này
 // CHỈ chọn từ những giải còn hàng > 0 (không yêu cầu số lượng cụ thể)
+// QUAN TRỌNG: Tính weight động dựa trên số lượng giải còn lại
 export const selectMaxPrizeTier = (prizes) => {
   // Lọc chỉ những giải còn hàng > 0
   const availablePrizes = prizes.filter((p) => p.quantity > 0);
@@ -170,20 +171,30 @@ export const selectMaxPrizeTier = (prizes) => {
     return 1;
   }
 
-  // Tính tổng weight của các giải còn hàng
-  const totalWeight = availablePrizes.reduce(
-    (sum, prize) => sum + prize.weight,
-    0,
-  );
+  // 🔴 MỚI: Tính weight động = weight gốc × (quantity / 4)
+  // Ví dụ: Giải 1tr có weight=8, nếu chỉ còn 1 cái → weight = 8 × (1/4) = 2
+  // Giải 200k có weight=23, nếu còn 5 cái → weight = 23 × (5/28) ≈ 4.1
+  const dynamicWeights = availablePrizes.map((prize) => {
+    // Lấy weight gốc từ SAMPLE_PRIZES để có xác suất chuẩn
+    const originalPrize = SAMPLE_PRIZES.find((p) => p.id === prize.id);
+    const baseWeight = originalPrize?.weight || prize.weight;
+    // Tính weight động: giảm tỷ lệ theo số lượng còn lại
+    const dynamicWeight =
+      baseWeight * (prize.quantity / originalPrize?.quantity || 1);
+    return dynamicWeight;
+  });
+
+  // Tính tổng weight động
+  const totalWeight = dynamicWeights.reduce((sum, w) => sum + w, 0);
 
   // Random số từ 0 đến totalWeight
   let random = Math.random() * totalWeight;
 
   // Duyệt qua từng giải còn hàng để tìm giải trần
-  for (const prize of availablePrizes) {
-    random -= prize.weight;
+  for (let i = 0; i < availablePrizes.length; i++) {
+    random -= dynamicWeights[i];
     if (random <= 0) {
-      return prize.tier; // Trả về tier của giải (1-5)
+      return availablePrizes[i].tier; // Trả về tier của giải (1-5)
     }
   }
 
@@ -193,6 +204,7 @@ export const selectMaxPrizeTier = (prizes) => {
 
 // Helper: Chọn giải thưởng thực tế dựa trên giải trần (ceiling)
 // Giải thực tế phải <= giải trần
+// QUAN TRỌNG: Sử dụng weight động dựa trên số lượng giải còn lại
 export const selectPrizeWithinCeiling = (prizes, maxTier) => {
   // Lọc các giải có tier <= maxTier (không vượt trần)
   const eligiblePrizes = prizes.filter(
@@ -205,20 +217,28 @@ export const selectPrizeWithinCeiling = (prizes, maxTier) => {
     return remaining[remaining.length - 1] || prizes[prizes.length - 1];
   }
 
-  // Tính tổng weight của các giải đủ điều kiện
-  const totalWeight = eligiblePrizes.reduce(
-    (sum, prize) => sum + prize.weight,
-    0,
-  );
+  // 🔴 MỚI: Tính weight động cho mỗi giải
+  const dynamicWeights = eligiblePrizes.map((prize) => {
+    // Lấy weight gốc từ SAMPLE_PRIZES
+    const originalPrize = SAMPLE_PRIZES.find((p) => p.id === prize.id);
+    const baseWeight = originalPrize?.weight || prize.weight;
+    // Weight động: giảm tỷ lệ theo số lượng còn lại
+    const dynamicWeight =
+      baseWeight * (prize.quantity / originalPrize?.quantity || 1);
+    return dynamicWeight;
+  });
+
+  // Tính tổng weight động
+  const totalWeight = dynamicWeights.reduce((sum, w) => sum + w, 0);
 
   // Random trong phạm vi weight
   let random = Math.random() * totalWeight;
 
   // Chọn giải
-  for (const prize of eligiblePrizes) {
-    random -= prize.weight;
+  for (let i = 0; i < eligiblePrizes.length; i++) {
+    random -= dynamicWeights[i];
     if (random <= 0) {
-      return prize;
+      return eligiblePrizes[i];
     }
   }
 
