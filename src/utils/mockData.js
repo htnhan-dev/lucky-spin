@@ -160,20 +160,21 @@ export const getRandomUsers = (count = 4) => {
 
 // Helper: Chọn giải TRẦN từ vòng quay (max prize ceiling)
 // Vòng quay chỉ định giải cao nhất có thể trúng trong lượt này
-// CHỈ chọn từ những giải còn hàng > 0 (không yêu cầu số lượng cụ thể)
-// QUAN TRỌNG: Tính weight động dựa trên số lượng giải còn lại
+// 🔴 QUAN TRỌNG: CHỈ chọn từ những giải còn hàng >= 4 (đủ để phân bổ cho 4 users)
+// Nếu giải nào < 4, sẽ bỏ qua vì không đủ số lượng
 export const selectMaxPrizeTier = (prizes) => {
-  // Lọc chỉ những giải còn hàng > 0
-  const availablePrizes = prizes.filter((p) => p.quantity > 0);
+  // Lọc chỉ những giải còn hàng >= 4 (đủ để quay cho 4 users)
+  const availablePrizes = prizes.filter((p) => p.quantity >= 4);
 
   if (availablePrizes.length === 0) {
-    // Nếu không còn giải nào, fallback trả về tier thấp nhất
+    // Nếu không còn giải nào đủ hàng, fallback trả về tier thấp nhất
     return 1;
   }
 
-  // 🔴 MỚI: Tính weight động = weight gốc × (quantity / 4)
-  // Ví dụ: Giải 1tr có weight=8, nếu chỉ còn 1 cái → weight = 8 × (1/4) = 2
-  // Giải 200k có weight=23, nếu còn 5 cái → weight = 23 × (5/28) ≈ 4.1
+  // 🔴 MỚI: Tính weight động = weight gốc × (quantity / originalQuantity)
+  // Ví dụ: Giải 1tr có weight=8, quantity=6 → weight = 8 × (6/6) = 8 (full)
+  // Giải 1tr còn 4 → weight = 8 × (4/6) ≈ 5.3
+  // Giải 200k có weight=23, còn 5 → weight = 23 × (5/28) ≈ 4.1
   const dynamicWeights = availablePrizes.map((prize) => {
     // Lấy weight gốc từ SAMPLE_PRIZES để có xác suất chuẩn
     const originalPrize = SAMPLE_PRIZES.find((p) => p.id === prize.id);
