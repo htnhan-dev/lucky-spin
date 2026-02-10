@@ -314,7 +314,11 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
         : ANIMATION_CONFIG.spin.duration;
 
     // QUAN TRỌNG: Chọn giải trần TRƯỚC khi bắt đầu animation
-    const tierFromWheel = selectMaxPrizeTier(availablePrizes);
+    // Truyền requiredCount = số users hiện tại để đảm bảo giải chọn đủ số lượng
+    const tierFromWheel = selectMaxPrizeTier(
+      availablePrizes,
+      selectedUsers.length,
+    );
 
     // Lưu duration và maxPrizeTier để pass xuống LuckyWheel component
     setCurrentSpinDuration(spinDuration);

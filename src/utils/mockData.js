@@ -162,45 +162,45 @@ export const getRandomUsers = (count = 4) => {
 // Vòng quay chỉ định giải cao nhất có thể trúng trong lượt này
 // 🔴 QUAN TRỌNG: CHỈ chọn từ những giải còn hàng >= 4 (đủ để phân bổ cho 4 users)
 // Nếu giải nào < 4, sẽ bỏ qua vì không đủ số lượng
-export const selectMaxPrizeTier = (prizes) => {
-  // Lọc chỉ những giải còn hàng >= 4 (đủ để quay cho 4 users)
-  const availablePrizes = prizes.filter((p) => p.quantity >= 4);
+export const selectMaxPrizeTier = (prizes, requiredCount = 4) => {
+  // CHÚ Ý: requiredCount = số users sẽ được phân bổ trong lượt này
+  // Bước 1: ưu tiên những giải có đủ số lượng >= requiredCount
+  let candidates = prizes.filter((p) => p.quantity >= requiredCount);
 
-  if (availablePrizes.length === 0) {
-    // Nếu không còn giải nào đủ hàng, fallback trả về tier thấp nhất
+  // Nếu không có giải đủ số lượng, hạ cấp: lấy tất cả giải còn > 0
+  if (candidates.length === 0) {
+    candidates = prizes.filter((p) => p.quantity > 0);
+  }
+
+  if (candidates.length === 0) {
+    // Không còn giải nào, fallback trả về tier thấp nhất
     return 1;
   }
 
-  // 🔴 MỚI: Tính weight động = weight gốc × (quantity / originalQuantity)
-  // Ví dụ: Giải 1tr có weight=8, quantity=6 → weight = 8 × (6/6) = 8 (full)
-  // Giải 1tr còn 4 → weight = 8 × (4/6) ≈ 5.3
-  // Giải 200k có weight=23, còn 5 → weight = 23 × (5/28) ≈ 4.1
-  const dynamicWeights = availablePrizes.map((prize) => {
-    // Lấy weight gốc từ SAMPLE_PRIZES để có xác suất chuẩn
+  // Tính weight động = baseWeight * (remaining / originalQuantity)
+  const dynamicWeights = candidates.map((prize) => {
     const originalPrize = SAMPLE_PRIZES.find((p) => p.id === prize.id);
     const baseWeight = originalPrize?.weight || prize.weight;
-    // Tính weight động: giảm tỷ lệ theo số lượng còn lại
-    const dynamicWeight =
-      baseWeight * (prize.quantity / originalPrize?.quantity || 1);
+    const originalQty = originalPrize?.quantity || prize.quantity || 1;
+    const dynamicWeight = baseWeight * (prize.quantity / originalQty);
     return dynamicWeight;
   });
 
-  // Tính tổng weight động
-  const totalWeight = dynamicWeights.reduce((sum, w) => sum + w, 0);
-
-  // Random số từ 0 đến totalWeight
-  let random = Math.random() * totalWeight;
-
-  // Duyệt qua từng giải còn hàng để tìm giải trần
-  for (let i = 0; i < availablePrizes.length; i++) {
-    random -= dynamicWeights[i];
-    if (random <= 0) {
-      return availablePrizes[i].tier; // Trả về tier của giải (1-5)
-    }
+  // If total weight is zero for any reason, fall back to uniform weights
+  let totalWeight = dynamicWeights.reduce((sum, w) => sum + w, 0);
+  if (totalWeight <= 0) {
+    for (let i = 0; i < dynamicWeights.length; i++) dynamicWeights[i] = 1;
+    totalWeight = dynamicWeights.length;
   }
 
-  // Fallback: trả về tier thấp nhất trong các giải còn hàng
-  return availablePrizes[availablePrizes.length - 1].tier;
+  let random = Math.random() * totalWeight;
+
+  for (let i = 0; i < candidates.length; i++) {
+    random -= dynamicWeights[i];
+    if (random <= 0) return candidates[i].tier;
+  }
+
+  return candidates[candidates.length - 1].tier;
 };
 
 // Helper: Chọn giải thưởng thực tế dựa trên giải trần (ceiling)
@@ -291,17 +291,28 @@ export const allocatePrizesForUsers = (users, prizes, maxTier) => {
       continue;
     }
 
-    const totalWeight = availablePrizesForThisRound.reduce(
-      (sum, p) => sum + p.weight,
-      0,
-    );
+    // Tính weight ĐỘNG dựa trên remaining / originalQuantity
+    const dynamicWeights = availablePrizesForThisRound.map((prize) => {
+      const originalPrize = SAMPLE_PRIZES.find((p) => p.id === prize.id);
+      const baseWeight = originalPrize?.weight || prize.weight;
+      const originalQty = originalPrize?.quantity || prize.quantity || 1;
+      return baseWeight * (prize.quantity / originalQty);
+    });
+
+    // Nếu tổng weight bằng 0 (edge case), fallback về uniform weights
+    let totalWeight = dynamicWeights.reduce((sum, w) => sum + w, 0);
+    if (totalWeight <= 0) {
+      for (let k = 0; k < dynamicWeights.length; k++) dynamicWeights[k] = 1;
+      totalWeight = dynamicWeights.length;
+    }
+
     let random = Math.random() * totalWeight;
 
     let selectedPrize = null;
-    for (const prize of availablePrizesForThisRound) {
-      random -= prize.weight;
+    for (let j = 0; j < availablePrizesForThisRound.length; j++) {
+      random -= dynamicWeights[j];
       if (random <= 0) {
-        selectedPrize = prize;
+        selectedPrize = availablePrizesForThisRound[j];
         break;
       }
     }
