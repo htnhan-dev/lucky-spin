@@ -35,6 +35,7 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
   const pickQueueRef = useRef([]); // Queue để lưu các lần pick đang chờ
   const isProcessingRef = useRef(false); // Flag để biết có đang xử lý không
   const currentSelectedUsersRef = useRef([]); // Track selected users hiện tại (real-time)
+  const lastPickTimeRef = useRef(0); // Track thời gian pick cuối cùng (tránh rapid clicks)
 
   const clearAllTimeouts = useCallback(() => {
     timeoutRefs.current.forEach((t) => clearTimeout(t));
@@ -244,6 +245,14 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     if (currentSelectedUsersRef.current.length >= ENVELOPE_POSITIONS.length) {
       return;
     }
+
+    // ✓ Tránh rapid double-click vào cùng 1 bao
+    // Nếu click trong 200ms từ lần pick trước → bỏ qua (tránh duplicate)
+    const now = Date.now();
+    if (now - lastPickTimeRef.current < 200) {
+      return;
+    }
+    lastPickTimeRef.current = now;
     // Cho phép pick unlimited (không giới hạn 4 người, lượt cuối có thể 3 người)
     // if (selectedUsers.length >= 4) return; // ✓ Bỏ logic này
 
