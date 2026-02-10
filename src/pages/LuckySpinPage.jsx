@@ -477,24 +477,26 @@ export const LuckySpinPage = () => {
               </motion.div>
 
               {/* Message khi chưa chọn đủ */}
-              {/* {selectedUsers.length < 4 && selectedUsers.length > 0 && (
-                
-              )} */}
-              <motion.div
-                className="text-center px-6! py-1! rounded-xl bg-amber-100 border-2 border-amber-400"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <p className="text-amber-800 font-bold text-sm">
-                  ⏳ Chọn đủ 4 người để bắt đầu quay ({selectedUsers.length}
-                  /4)
-                </p>
-              </motion.div>
+              {selectedUsers.length > 0 && (
+                <motion.div
+                  className="text-center px-6! py-1! rounded-xl bg-amber-100 border-2 border-amber-400"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <p className="text-amber-800 font-bold text-sm">
+                    🎁 Đã chọn {selectedUsers.length} bao lì xì
+                  </p>
+                </motion.div>
+              )}
 
               {/* 4 Red Envelopes - Horizontal */}
               <div className="flex items-center justify-center gap-6">
                 {[0, 1, 2, 3].map((index) => {
                   const allocation = userPrizes[index]; // { user, prize }
+                  // Check xem bao này có bị disable không
+                  // Bao bị disable nếu: index >= selectedUsers.length (vì lượt cuối chỉ có 3 người)
+                  const isDisabledEnvelope = index >= selectedUsers.length;
+
                   return (
                     <RedEnvelope
                       key={index}
@@ -509,7 +511,11 @@ export const LuckySpinPage = () => {
                           ? () => removeSelectedUser(selectedUsers[index].id)
                           : null
                       }
-                      canClick={canPickUser && !selectedUsers[index]}
+                      canClick={
+                        canPickUser &&
+                        !selectedUsers[index] &&
+                        !isDisabledEnvelope
+                      }
                       canReveal={
                         canRevealEnvelopes && !openedEnvelopes.includes(index)
                       }
@@ -517,6 +523,7 @@ export const LuckySpinPage = () => {
                       isRevealed={openedEnvelopes.includes(index)}
                       isHighlighted={highlightedEnvelopeIndex === index}
                       luckyStarUser={luckyStarUser}
+                      isDisabled={isDisabledEnvelope}
                     />
                   );
                 })}

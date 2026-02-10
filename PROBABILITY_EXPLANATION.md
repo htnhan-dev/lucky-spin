@@ -26,27 +26,31 @@ Ví dụ:
 ## Logic Spin Hiện Tại
 
 ### Bước 1: Quay Ra Giải Trần (selectMaxPrizeTier)
-**MỚI**: Chỉ quay từ những giải **còn hàng > 3** (quantity > 3)
-- Vì 4 bao lì xì sẽ được chia cho 4 users trong lượt quay này
-- Nên giải trần phải còn **≥ 4** để đảm bảo đủ
+**MỚI**: Chỉ quay từ những giải **còn hàng > 0** (quantity > 0)
+- Không yêu cầu số lượng cụ thể
+- Cho phép 4 users, 3 users (lượt cuối), hoặc số khác
 
 Ví dụ: Nếu giải Ba chỉ còn 3 giải
-- Giải Ba **không thể** là giải trần vì 3 ≤ 4 ❌
-- Các giải đủ điều kiện: Đặc biệt (6), Nhất (6), Nhì (28), Tư (60)
-- Chỉ quay random từ 4 giải này
-- Nếu quay ra maxTier ≥ 3 (Ba), sẽ tự động hạ xuống giải thấp hơn
+- Giải Ba **vẫn có thể** là giải trần vì 3 > 0 ✓
+- Các giải đủ điều kiện: Đặc biệt (6), Nhất (6), Nhì (28), Ba (3), Tư (55)
 
 ### Bước 2: Chọn Giải Thực Tế (selectPrizeWithinCeiling)
-**Quy tắc**: Giải thực tế phải `<= giải trần` và **còn hàng**
+**Quy tắc**: Giải thực tế phải `<= giải trần` và **còn hàng > 0**
 
-Ví dụ: Quay trúng maxTier = 2 (Ba)
-- Các giải đủ điều kiện: Tư (tier 1), Ba (tier 2) - cả 2 đều còn hàng
+Ví dụ: Quay trúng maxTier = 2 (Ba, 100k)
+- Các giải đủ điều kiện: Tư (tier 1, 50k), Ba (tier 2, 100k)
+- Chỉ những giải còn hàng > 0 mới được chọn
 - Chọn random từ 2 giải này dựa trên weight
 
-**Trường hợp đặc biệt**: Giải Ba hết hàng (chỉ còn 3), quay ra maxTier = 2
-- Vì Ba chỉ còn 3 (≤ 4), nên **không được quay ra tier 3 (Ba)**
-- Các giải đủ điều kiện: Tư (tier 1) 
+**Trường hợp hết hàng**: Giải Ba hết (quantity = 0), quay ra maxTier = 2
+- Các giải đủ điều kiện: Tư (tier 1, 50k) - vì Ba hết
 - Tự động hạ xuống Tư ✓
+
+### Bước 3: Phân Bổ Giải Cho Users
+**Linh hoạt theo số lượng**: 4 users, 3 users (lượt cuối), hoặc số khác
+- Với 131 users: 131 ÷ 4 = 32 lượt (4 users) + 1 lượt cuối (3 users)
+- Mỗi user trong lượt nhận 1 giải từ các giải đủ điều kiện
+- Đảm bảo không quay lại giải đã hết
 
 ## Chú Ý Quan Trọng
 

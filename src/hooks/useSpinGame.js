@@ -151,11 +151,12 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
 
         setTimeout(() => {
           setSelectedUsers((prev) => {
-            if (prev.length >= 4) {
-              console.warn("⚠️ Already have 4 users, skipping add");
-              setGameState(GAME_STATE.READY_TO_SPIN);
-              return prev;
-            }
+            // Bỏ check >= 4, cho phép quay ngay khi có >= 1 user
+            // if (prev.length >= 4) {
+            //   console.warn("⚠️ Already have 4 users, skipping add");
+            //   setGameState(GAME_STATE.READY_TO_SPIN);
+            //   return prev;
+            // }
 
             const newUsers = [...prev, finalUser];
 
@@ -180,6 +181,9 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
                 setLuckyStarCount((prev) => prev + 1);
                 sessionStorage.removeItem("luckyStarPosition");
               }
+              setTimeout(() => setGameState(GAME_STATE.READY_TO_SPIN), 500);
+            } else if (newUsers.length >= 1) {
+              // ✓ Cho phép quay ngay khi có >= 1 user (không cần đợi 4 người)
               setTimeout(() => setGameState(GAME_STATE.READY_TO_SPIN), 500);
             } else {
               setGameState(GAME_STATE.IDLE);
@@ -210,7 +214,8 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     // Click vào bao lì xì → Thêm vào queue
     if (gameState !== GAME_STATE.IDLE && gameState !== GAME_STATE.AUTO_PICKING)
       return;
-    if (selectedUsers.length >= 4) return;
+    // Cho phép pick unlimited (không giới hạn 4 người, lượt cuối có thể 3 người)
+    // if (selectedUsers.length >= 4) return; // ✓ Bỏ logic này
 
     // NGÔI SAO HI VỌNG: Nếu là lượt mới (chưa chọn ai) → Random xem có phát sao không
     if (selectedUsers.length === 0 && luckyStarCount < 6 && !luckyStarUser) {
@@ -248,6 +253,7 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     processSinglePick,
     luckyStarCount,
     luckyStarUser,
+    users,
   ]);
   const spinWheel = useCallback(() => {
     console.log("🎰 spinWheel called", {
@@ -268,7 +274,8 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
       console.log("❌ Wrong gameState:", gameState);
       return;
     }
-    if (selectedUsers.length !== 4) {
+    // Cho phép quay với số lượng users >= 1 (không yêu cầu chính xác 4)
+    if (selectedUsers.length < 1) {
       console.log("❌ Not enough users:", selectedUsers.length);
       return;
     }
@@ -310,8 +317,8 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     setSelectedUsers((prev) => {
       const newUsers = prev.filter((u) => u.id !== userId);
 
-      // Nếu còn dưới 4 users sau khi xóa → reset về IDLE để có thể pick lại
-      if (newUsers.length < 4) {
+      // Nếu không còn users sau khi xóa → reset về IDLE để có thể pick lại
+      if (newUsers.length < 1) {
         setGameState(GAME_STATE.IDLE);
       }
 
@@ -381,8 +388,8 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
 
         setRevealingEnvelope(null);
 
-        // Kiểm tra đã mở hết 4 bao chưa
-        if (openedEnvelopes.length + 1 >= 4) {
+        // Kiểm tra đã mở hết bao lì xì chưa (linh hoạ theo số lượng users)
+        if (openedEnvelopes.length + 1 >= selectedUsers.length) {
           setGameState(GAME_STATE.ROUND_COMPLETE);
 
           // ĐÃ MỞ HẾT 4 BAO → Bây giờ mới trừ số lượng tồn kho
@@ -417,6 +424,7 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
       userPrizes,
       availablePrizes,
       updatePrizeQuantity,
+      selectedUsers,
     ],
   );
 
@@ -491,15 +499,13 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     revealEnvelope,
     // Flags
     canPickUser:
-      (gameState === GAME_STATE.IDLE ||
-        gameState === GAME_STATE.AUTO_PICKING) &&
-      selectedUsers.length < 4,
-    canSpin: gameState === GAME_STATE.READY_TO_SPIN,
+      gameState === GAME_STATE.IDLE || gameState === GAME_STATE.AUTO_PICKING,
+    canSpin: gameState === GAME_STATE.READY_TO_SPIN && selectedUsers.length > 0,
     isSpinning: gameState === GAME_STATE.SPINNING,
     hasWinner: currentWinner !== null,
     pickedCount: selectedUsers.length,
-    needMoreUsers: selectedUsers.length < 4,
+    needMoreUsers: selectedUsers.length < 1,
     canRevealEnvelopes: gameState === GAME_STATE.PRIZES_ALLOCATED,
-    allEnvelopesRevealed: openedEnvelopes.length >= 4,
+    allEnvelopesRevealed: openedEnvelopes.length >= selectedUsers.length,
   };
 };

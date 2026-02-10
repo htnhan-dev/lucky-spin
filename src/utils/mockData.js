@@ -72,7 +72,8 @@ export const SAMPLE_USERS = Array.from({ length: 100 }, (_, i) => ({
 }));
 
 // Danh sách giải thưởng theo yêu cầu
-// Cơ cấu: Đặc biệt (6), Nhất (6), Nhì (28), Ba (36), Tư (60)
+// Cơ cấu: Đặc biệt (6), Nhất (6), Nhì (28), Ba (36), Tư (55)
+// Tổng giải: 131
 // TRỌNG SỐ NGHỊCH: Giải càng lớn → weight càng THẤP → xác suất càng THẤP
 /*
 Xác suất mong muốn:
@@ -145,7 +146,7 @@ export const SAMPLE_PRIZES = [
     emoji: "🧧",
     icon: "Sparkles",
     color: "#10B981",
-    quantity: 60,
+    quantity: 55,
     weight: 25,
     tier: 1,
   },
@@ -159,17 +160,17 @@ export const getRandomUsers = (count = 4) => {
 
 // Helper: Chọn giải TRẦN từ vòng quay (max prize ceiling)
 // Vòng quay chỉ định giải cao nhất có thể trúng trong lượt này
-// CHỈ chọn từ những giải còn hàng > 4 (vì 4 bao lì xì dành cho 4 users trong lượt này)
+// CHỈ chọn từ những giải còn hàng > 0 (không yêu cầu số lượng cụ thể)
 export const selectMaxPrizeTier = (prizes) => {
-  // Lọc chỉ những giải còn hàng > 3 (tối thiểu 4 để dành 4 cho lượt này + 1 dự phòng)
-  const availablePrizes = prizes.filter((p) => p.quantity > 3);
+  // Lọc chỉ những giải còn hàng > 0
+  const availablePrizes = prizes.filter((p) => p.quantity > 0);
 
   if (availablePrizes.length === 0) {
-    // Nếu không còn giải nào đủ số lượng, fallback trả về tier thấp nhất
+    // Nếu không còn giải nào, fallback trả về tier thấp nhất
     return 1;
   }
 
-  // Tính tổng weight của các giải còn hàng đủ điều kiện
+  // Tính tổng weight của các giải còn hàng
   const totalWeight = availablePrizes.reduce(
     (sum, prize) => sum + prize.weight,
     0,
@@ -186,7 +187,7 @@ export const selectMaxPrizeTier = (prizes) => {
     }
   }
 
-  // Fallback: trả về tier thấp nhất trong các giải còn hàng đủ điều kiện
+  // Fallback: trả về tier thấp nhất trong các giải còn hàng
   return availablePrizes[availablePrizes.length - 1].tier;
 };
 
@@ -233,7 +234,8 @@ export const resetPrizes = () => {
   }));
 };
 
-// Helper: Phân bổ 4 giải cho 4 users dựa trên giải trần
+// Helper: Phân bổ giải cho users (số lượng users linh hoạt)
+// Có thể là 4 users, 3 users (lượt cuối), hoặc số khác
 export const allocatePrizesForUsers = (users, prizes, maxTier) => {
   // Lọc các giải có tier <= maxTier và còn số lượng
   const eligiblePrizes = prizes.filter(
@@ -248,32 +250,44 @@ export const allocatePrizesForUsers = (users, prizes, maxTier) => {
     return users.map((user) => ({ user, prize: fallbackPrize }));
   }
 
-  // Phân bổ 4 giải cho 4 users
+  // Phân bổ giải cho users (số lượng linh hoạt)
   const allocations = [];
   const prizesCopy = eligiblePrizes.map((p) => ({ ...p })); // Copy để giảm quantity
 
   for (let i = 0; i < users.length; i++) {
-    // Chọn giải theo weighted random
-    const totalWeight = prizesCopy.reduce(
-      (sum, p) => sum + (p.quantity > 0 ? p.weight : 0),
+    // Chọn giải theo weighted random từ những giải còn hàng
+    const availablePrizesForThisRound = prizesCopy.filter(
+      (p) => p.quantity > 0,
+    );
+
+    if (availablePrizesForThisRound.length === 0) {
+      // Nếu hết giải trong vòng này, lấy giải thấp nhất
+      const fallback = prizesCopy[prizesCopy.length - 1];
+      allocations.push({
+        user: users[i],
+        prize: fallback,
+      });
+      continue;
+    }
+
+    const totalWeight = availablePrizesForThisRound.reduce(
+      (sum, p) => sum + p.weight,
       0,
     );
     let random = Math.random() * totalWeight;
 
     let selectedPrize = null;
-    for (const prize of prizesCopy) {
-      if (prize.quantity > 0) {
-        random -= prize.weight;
-        if (random <= 0) {
-          selectedPrize = prize;
-          break;
-        }
+    for (const prize of availablePrizesForThisRound) {
+      random -= prize.weight;
+      if (random <= 0) {
+        selectedPrize = prize;
+        break;
       }
     }
 
-    // Fallback nếu không chọn được
+    // Fallback nếu không chọn được (không nên xảy ra)
     if (!selectedPrize) {
-      selectedPrize = prizesCopy.find((p) => p.quantity > 0) || prizesCopy[0];
+      selectedPrize = availablePrizesForThisRound[0];
     }
 
     allocations.push({
