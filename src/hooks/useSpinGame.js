@@ -150,13 +150,26 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
 
         setTimeout(() => {
           setSelectedUsers((prev) => {
-            const newUsers = [...prev, finalUser];
+            // Defensive: avoid exceeding number of envelopes
+            if (prev.length >= ENVELOPE_POSITIONS.length) {
+              // Clear queue as no more picks allowed this round
+              pickQueueRef.current = [];
+              return prev;
+            }
+
+            // Avoid duplicates just in case
+            if (prev.some((u) => u.id === finalUser.id)) return prev;
+
+            const newUsers = [...prev, finalUser].slice(
+              0,
+              ENVELOPE_POSITIONS.length,
+            );
 
             // QUAN TRỌNG: Sync ngay vào ref để lần pick tiếp theo biết
             currentSelectedUsersRef.current = newUsers;
 
             // NGÔI SAO HI VỌNG: Nếu đủ 4 users → Check xem user nào trúng sao
-            if (newUsers.length === 4) {
+            if (newUsers.length === ENVELOPE_POSITIONS.length) {
               const luckyStarPosition =
                 sessionStorage.getItem("luckyStarPosition");
               if (
@@ -179,6 +192,9 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
                 setGameState(GAME_STATE.READY_TO_SPIN);
                 readyToSpinTimeoutRef.current = null;
               }, 500);
+
+              // When reaching capacity, clear any pending picks
+              pickQueueRef.current = [];
             } else if (newUsers.length >= 1) {
               // ✓ Cho phép quay ngay khi có >= 1 user (không cần đợi 4 người)
               if (readyToSpinTimeoutRef.current) {
@@ -223,6 +239,11 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
       gameState === GAME_STATE.ROUND_COMPLETE
     )
       return;
+
+    // Defensive: nếu đã đầy số bao thì không thêm lượt pick nữa
+    if (currentSelectedUsersRef.current.length >= ENVELOPE_POSITIONS.length) {
+      return;
+    }
     // Cho phép pick unlimited (không giới hạn 4 người, lượt cuối có thể 3 người)
     // if (selectedUsers.length >= 4) return; // ✓ Bỏ logic này
 
