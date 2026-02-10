@@ -61,9 +61,13 @@ export const PrizeList = ({ prizes, spinHistory }) => {
                 >
                   {prize.description}
                 </p> */}
-                <p className="text-xs text-gray-500">
+                <p
+                  className={`text-xs text-gray-500 ${
+                    prize.id === "prize-fourth" ? "invisible" : ""
+                  }`}
+                >
                   Còn{" "}
-                  <span className="text-yellow-500 font-medium!">
+                  <span className="text-yellow-500 font-medium">
                     {prize.quantity}
                   </span>{" "}
                   giải
