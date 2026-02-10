@@ -73,13 +73,7 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
       spinHistory.map((h) => h.user.name.trim().toLowerCase()),
     );
 
-    console.log("🔍 Debug Pick User:", {
-      totalUsers: users.length,
-      currentSelectedUsersLength: currentSelectedUsersRef.current.length, // Dùng ref
-      historyLength: spinHistory.length,
-      winnersIds: Array.from(winnersIdSet),
-      winnersNames: Array.from(winnersNameSet),
-    });
+    // Debug logs removed
 
     const availableUsers = users.filter(
       (u) =>
@@ -88,11 +82,7 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
         !winnersNameSet.has(u.name.trim().toLowerCase()), // Chưa trúng giải trong lịch sử (check TÊN)
     );
 
-    console.log(
-      "✅ Available users:",
-      availableUsers.length,
-      availableUsers.map((u) => ({ id: u.id, name: u.name })),
-    );
+    // Debug logs removed
 
     // Nếu không còn user khả dụng (tất cả đã trúng) → Hiển thị cảnh báo
     if (availableUsers.length === 0) {
@@ -167,9 +157,7 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
               ) {
                 const position = parseInt(luckyStarPosition);
                 const luckyUser = newUsers[position];
-                console.log(
-                  `⭐ User "${luckyUser.name}" at position ${position} won the lucky star!`,
-                );
+                // Lucky star assigned
                 setLuckyStarUser(luckyUser);
                 setLuckyStarCount((prev) => prev + 1);
                 sessionStorage.removeItem("luckyStarPosition");
@@ -218,9 +206,6 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
       const starChance = 6 / totalRounds; // VD: 136 người = 34 lượt → 6/34 = ~17.6%
 
       const shouldGiveStar = Math.random() < starChance;
-      console.log(
-        `⭐ Star chance: ${(starChance * 100).toFixed(1)}% (${totalRounds} rounds for ${users.length} users) → ${shouldGiveStar ? "YES" : "NO"}`,
-      );
 
       if (shouldGiveStar) {
         // Random 1 user trong 4 users sẽ được pick để trúng sao (25% mỗi vị trí)
@@ -249,27 +234,18 @@ export const useSpinGame = (users, prizes, updatePrizeQuantity) => {
     users,
   ]);
   const spinWheel = useCallback(() => {
-    console.log("🎰 spinWheel called", {
-      gameState,
-      selectedUsersLength: selectedUsers.length,
-      availablePrizesLength: availablePrizes.length,
-      availablePrizes: availablePrizes.map((p) => ({
-        id: p.id,
-        name: p.name,
-        quantity: p.quantity,
-      })),
-    });
+    // spinWheel called
 
     if (
       gameState !== GAME_STATE.READY_TO_SPIN &&
       gameState !== GAME_STATE.PRIZES_ALLOCATED
     ) {
-      console.log("❌ Wrong gameState:", gameState);
+      // Wrong gameState
       return;
     }
     // Cho phép quay với số lượng users >= 1 (không yêu cầu chính xác 4)
     if (selectedUsers.length < 1) {
-      console.log("❌ Not enough users:", selectedUsers.length);
+      // Not enough users
       return;
     }
 
